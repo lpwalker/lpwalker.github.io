@@ -4,5 +4,12 @@ title: "Academic Portfolio"
 
 # Welcome!
 
-Welcome to my academic porfolio! On this website, you will find lab reports and analysis projects completed across my statistics courses at Colgate University!
+Welcome to my academic porfolio! On this website, you will find lab reports and analysis projects completed across my statistics courses at Colgate University: 
 
+::: {.colgate-callout}
+**Computational Statistics (MATH 240):** R programming, data wrangling, and simulation models.\
+
+**Data Analysis I (MATH 354):** Applied statistical inference, hypothesis testing, and modeling.
+:::
+
+Use the sidebar menu to navigate through my coursework!
