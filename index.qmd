@@ -1,7 +1,8 @@
 ---
-title: "Portfolio"
+title: "Academic Portfolio"
 ---
 
-This is a Quarto website.
+# Welcome!
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Welcome to my academic porfolio! On this website, you will find lab reports and analysis projects completed across my statistics courses at Colgate University!
+
