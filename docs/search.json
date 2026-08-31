@@ -2,9 +2,9 @@
   {
     "objectID": "about.html",
     "href": "about.html",
-    "title": "About",
+    "title": "About Me",
     "section": "",
-    "text": "About this site"
+    "text": "I am a senior at Colgate University studying Applied Mathematics with a minor in Mathematical Systems Biology. I am currently taking classes focused on statistics/biostatistics, and my graduation date is May 2027."
   },
   {
     "objectID": "index.html",
@@ -12,5 +12,19 @@
     "title": "Academic Portfolio",
     "section": "",
     "text": "Welcome!\nWelcome to my academic porfolio! On this website, you will find lab reports and analysis projects completed across my statistics courses at Colgate University:\n\nComputational Statistics (MATH 240): R programming, data wrangling, and simulation models.\n\nData Analysis I (MATH 354): Applied statistical inference, hypothesis testing, and modeling.\n\nUse the sidebar menu to navigate through my coursework!"
+  },
+  {
+    "objectID": "about.html#education",
+    "href": "about.html#education",
+    "title": "About Me",
+    "section": "",
+    "text": "I am a senior at Colgate University studying Applied Mathematics with a minor in Mathematical Systems Biology. I am currently taking classes focused on statistics/biostatistics, and my graduation date is May 2027."
+  },
+  {
+    "objectID": "about.html#technical-skills",
+    "href": "about.html#technical-skills",
+    "title": "About Me",
+    "section": "Technical Skills",
+    "text": "Technical Skills\n\nLanguages: R, MATLAB, Python, SAS\nTools: Positron, RStudio, Quarto, Git/GitHub, LaTeX"
   }
 ]

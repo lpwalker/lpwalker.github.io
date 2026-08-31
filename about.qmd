@@ -1,5 +1,24 @@
 ---
-title: "About"
+title: "About Me"
+about:
+    template: trestles
+    image: images/profile_pic.jpg
+    links:
+    - icon: github
+      text: GitHub
+      href: https://github.com/lpwalker
+    - icon: linkedin
+      text: LinkedIn
+      href: https://linkedin.com/laurenwalker6
+    - icon: envelope
+      text: Email
+      href: mailto:lpwalker@colgate.edu
 ---
 
-About this site
+## Education
+
+I am a senior at Colgate University studying Applied Mathematics with a minor in Mathematical Systems Biology. I am currently taking classes focused on statistics/biostatistics, and my graduation date is May 2027.
+
+## Technical Skills
+* **Languages:** R, MATLAB, Python, SAS
+* **Tools:** Positron, RStudio, Quarto, Git/GitHub, LaTeX
