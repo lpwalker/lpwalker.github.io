@@ -3,20 +3,29 @@ project:
   output-dir: docs
 
 website:
-  title: "Portfolio"
-  navbar:
-    left:
+  title: "Academic Portfolio"
+  favicon: images/ColgateC.png
+  sidebar: 
+    logo: images/ColgateSeal.png
+    style: "docked"
+    collapse-level: 1
+    search: false
+    contents:
       - href: index.qmd
-        text: Home
-      - about.qmd
-
+        text: " Home"
+        icon: house
+      - href: about.qmd
+        text: " About"
+        icon: person
+      # MATH 240
+      - section: "Computational Statistics"
+      # MATH 354
+      - section: "Data Analysis 1"
+  page-footer:
+    left: "© 2026 Colgate University Student Portfolio"
+    right: "[GitHub Source](https://github.com/lpwalker)"
 format:
   html:
-    theme:
-      - cosmo
-      - brand
+    theme: cosmo
     css: styles.css
     toc: true
-
-
-
