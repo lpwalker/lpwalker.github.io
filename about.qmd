@@ -1,8 +1,9 @@
 ---
 title: "About Me"
+image: images/profile_pic.jpg
 about:
     template: trestles
-    image: images/profile_pic.jpg
+    image-shape: rounded
     links:
     - icon: github
       text: GitHub
@@ -15,9 +16,15 @@ about:
       href: mailto:lpwalker@colgate.edu
 ---
 
+:::{#hero-heading}
+
+Lauren Walker is a student at Colgate University who is looking to study biostatistics and data science. Lauren is currently applying to M.S. and M.P.H programs in Biostatistics. Outside of academics, Lauren loves to spend time with her dog, Skye, and watch movies with her friends!
+:::
+
 ## Education
 
-I am a senior at Colgate University studying Applied Mathematics with a minor in Mathematical Systems Biology. I am currently taking classes focused on statistics/biostatistics, and my graduation date is May 2027.
+Colgate University | Hamilton, NY
+B.A. in Applied Mathematics | Aug 2023 - May 2027
 
 ## Technical Skills
 * **Languages:** R, MATLAB, Python, SAS
