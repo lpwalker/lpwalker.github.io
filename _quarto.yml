@@ -4,6 +4,7 @@ project:
   resources:
     - "MATH_240/Lab9.pdf"
     - "MATH_240/Lab7-8.pdf"
+    - "MATH_240/Lab1.pdf"
 
 website:
   title: "Academic Portfolio"
@@ -26,8 +27,10 @@ website:
       # MATH 240
       - section: "Computational Statistics"
         contents:
+          - text: "Lab 1: Objects in R"
+            href: MATH_240/Lab1.pdf
           - text: "Lab 7-8: Point Estimation"
-            href: MATH_240\Lab7-8.pdf
+            href: MATH_240/Lab7-8.pdf
           - text: "Lab 9: Variance"
             href: MATH_240/Lab9.pdf
       # MATH 354
