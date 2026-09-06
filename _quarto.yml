@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: docs
+  resources:
+    - "MATH_240/Lab9.pdf"
 
 website:
   title: "Academic Portfolio"
