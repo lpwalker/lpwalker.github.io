@@ -22,6 +22,9 @@ website:
         icon: robot
       # MATH 240
       - section: "Computational Statistics"
+        contents:
+          - text: "Lab 9: Variance"
+          - href: MATH 240/Lab9.pdf
       # MATH 354
       - section: "Data Analysis 1"
   page-footer:
