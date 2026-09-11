@@ -1,0 +1,80 @@
+---
+title: "HW1"
+author: "Lauren Walker"
+editor: visual
+---
+
+## Question 1
+
+### Part a
+
+A benefit of using the Wilcox signed rank test is that the researchers don't have to assume normality  for the underlying population distribution, as that is unknown and the sample size is not large enough for the CLT. However, there are a few concerns to using this test: 
+
+1. The data collected are proportions that represent the number of times the GWL dogs correctly retrieved the new toy when requested out of 12 requests. The fact that this data is discrete with only 13 possible unique observations leads to multiple tied observations in the data. Using the exact Wilcoxon distribution could be an issue due to having many ties, and the authors would need to account for them in order to use an accurate Wilcoxon distribution.
+
+2. Due to n=10, the sample size is likely not large enough to use an asymptotic distribution because n would usually need to be at least 50. Because the authors didn't specify which distribution they used, this could be an issue.
+
+3. The boundedness of the range of the data (0, 1), and the fact that 4 dogs had a proportion of 1.000 is a concern for the symmetry assumption for the Wilcoxon signed rank test. We don't know the underlying distribution, and we definitely don't have evidence supporting that it might be symmetric from the sample data.
+
+A one-sample t-test is constrained by the assumption that the population is normally distributed and the population variance exists, both of which we don't know, and the sample size of n = 10 does not satisfy the CLT. Since the sample data is skewed left, we don't have evidence that the population distribution is normally distributed from the sample data. Moreover, a one-sample z-test for proportions also does not have a sample size large enough for the CLT. Due to the issues with the sample size, I think the best choice would be to use an exact binomial test because we don't have to worry about our population data being normally distributed or about the CLT (relies on the binomial distribution). We can frame the data to be Bernoulli by interpreting each dog as a success if it retrieved the new toy correctly more than 50% of the time. 
+
+
+### Part b
+We are aiming to evaluate whether GWL dogs can correctly retrieve a new toy when requested better than chance (50%), aftering overhearing two people reference the object while not addressing the dog. n = 10 dogs were requested 12 times to retrieve the new toy, and our data present the proportion of times the dog correctly retrieved it.
+
+Our null hypothesis is that H0: p = 0.50 and Ha: p > 0.50 and conducting a one-sided exact binomial test using alpha = 0.05, where a success means that the dog retrieved the new toy correctly more than half the time. We decided to use the exact binomial test because we violate no assumptions; our data does not satisfy the normality/CLT condition for a one-sample t-test, does not satisfy the symmetric assumption for a Wilcox signed rank test, and does not satisfy the sample size / CLT condition for a one-sample z-test for proportions. 
+
+```{r}
+dat.dogs <- c(1.0000, 1.0000, 0.7500, 1.0000, 0.4167, 0.8333, 0.7500, 0.8333, 0.8333, 1.0000) # data 
+
+successes <- sum(dat.dogs > 0.50)    # counts dogs better than chance (p > 0.50)
+n <- length(dat.dogs)                # sample size (number of dogs)
+
+test.result <- binom.test(x = successes,            # number of successes (p > 0.50)
+                          n = n,                    # sample size (trials)
+                          p = 0.50,                 # p0 = 0.50
+                          alternative = "greater")  # one-sided test
+(test.stat <- test.result$statistic) # test statistic
+(p_val <- test.result$p.value)       # p-value
+(CI    <- test.result$conf.int)      # 95% confidence interval
+```
+
+Our p-value (p_val = 0.0107) is less than alpha = 0.05, and we have statistically discernible evidence to conclude that the true proportion of correct retrievals is greater than 0.50. We can say with 95% confidence that the true proportion of correct retrievals of the new toy out of 12 requests lies between [0.61, 1.00]. 
+
+
+## Question 2
+
+### Part a
+The major issue with the binomial test here is that the number of trials is very low, in addition to already having a low sample size of n = 10. This might decrease the accuracy of the binomial distribution at predicting the true proportion of correctly selecting the new toy when requested. The conditions of the exact binomial test require that there be a fixed number of trials (2), and that each trial ends in a success or a failure. Additionally, the trials must be independent from one another, which is not satisfied in the 2 new toy trials, but would be satisfied if measuring the overall success of each dog as a separate 10 trials. Lastly, the binomial test assumes that the probability of success is the same across each trial, which is assumed to be p = 0.50.
+
+### Part b
+```{r}
+dat.dogs2 <- rep(1, 10) # data
+
+n2 <- length(dat.dogs2)  # sample size
+successes2 <- sum(dat.dogs2 == 1) # number of successes
+
+test.result2 <- binom.test(x = successes2,            # data
+                           n = n2,                    # number of trials
+                           p = 0.25,                 # p0 = 0.50 for each dogs indiv. trial ^ 2 trials = 0.25
+                           alternative = "greater")  # one-sided
+test.result2$p.value
+```
+The probability of all 10 dogs successfully retrieving the new toy in both trials is around 0.00000095. 
+
+### Part c
+```{r}
+n <- 10   # number of trials
+p <- 0.25 # prob of success
+
+mu_Y    = n*p             # mean of gaussian approx.
+sigma_Y = sqrt(n*p*(1-p)) # standard dev of gaussian approx.
+
+# P(B=b) = P(b - 0.50 < Y < b + 0.50) = P(Y<= b + 0.50) - P(Y<= b - 0.50)
+# P(B=10) = P(10 - 0.50 < Y < 10 + 0.50) = P(Y<= 10 + 0.50) - P(Y<= 10 - 0.50)
+(prob <- pnorm(10.5, mu_Y, sigma_Y) - pnorm(9.5, mu_Y, sigma_Y))
+```
+Yes, the probability obtained from the gaussian distribution approximation is around the same as the probability obtained from the binomial distribution. 0.00000095 ~~ 0.00000016. 
+
+### Part d
+I think that, because all of the trials were a success, performing an inference might not be the best option due to having zero variability in the sample. Doing this inference, with no variability, will reject the null hypothesis unless p0 lies above some threshold. This meeans that the inference has less to do with the data and more to do with the chosen null hypothesis.

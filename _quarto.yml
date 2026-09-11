@@ -35,6 +35,9 @@ website:
             href: MATH_240/Lab9.pdf
       # MATH 354
       - section: "Data Analysis 1"
+        contents:
+          - text: "HW1: One Sample Inference"
+            href: MATH_354/HW1.qmd
   page-footer:
     left: "© 2026 Colgate University Student Portfolio"
     right: "[GitHub Source](https://github.com/lpwalker)"
