@@ -219,20 +219,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#question-1" id="toc-question-1" class="nav-link active" data-scroll-target="#question-1">Question 1</a>
+  <li><a href="#question-1" id="toc-question-1" class="nav-link active" data-scroll-target="#question-1"><span class="header-section-number">1</span> Question 1</a>
   <ul class="collapse">
-  <li><a href="#part-a" id="toc-part-a" class="nav-link" data-scroll-target="#part-a">Part a</a></li>
-  <li><a href="#part-b" id="toc-part-b" class="nav-link" data-scroll-target="#part-b">Part b</a></li>
+  <li><a href="#part-a" id="toc-part-a" class="nav-link" data-scroll-target="#part-a"><span class="header-section-number">1.1</span> Part a</a></li>
+  <li><a href="#part-b" id="toc-part-b" class="nav-link" data-scroll-target="#part-b"><span class="header-section-number">1.2</span> Part b</a></li>
   </ul></li>
-  <li><a href="#question-2" id="toc-question-2" class="nav-link" data-scroll-target="#question-2">Question 2</a>
+  <li><a href="#question-2" id="toc-question-2" class="nav-link" data-scroll-target="#question-2"><span class="header-section-number">2</span> Question 2</a>
   <ul class="collapse">
-  <li><a href="#part-a-1" id="toc-part-a-1" class="nav-link" data-scroll-target="#part-a-1">Part a</a></li>
-  <li><a href="#part-b-1" id="toc-part-b-1" class="nav-link" data-scroll-target="#part-b-1">Part b</a></li>
-  <li><a href="#part-c" id="toc-part-c" class="nav-link" data-scroll-target="#part-c">Part c</a></li>
-  <li><a href="#part-d" id="toc-part-d" class="nav-link" data-scroll-target="#part-d">Part d</a></li>
+  <li><a href="#part-a-1" id="toc-part-a-1" class="nav-link" data-scroll-target="#part-a-1"><span class="header-section-number">2.1</span> Part a</a></li>
+  <li><a href="#part-b-1" id="toc-part-b-1" class="nav-link" data-scroll-target="#part-b-1"><span class="header-section-number">2.2</span> Part b</a></li>
+  <li><a href="#part-c" id="toc-part-c" class="nav-link" data-scroll-target="#part-c"><span class="header-section-number">2.3</span> Part c</a></li>
+  <li><a href="#part-d" id="toc-part-d" class="nav-link" data-scroll-target="#part-d"><span class="header-section-number">2.4</span> Part d</a></li>
   </ul></li>
   </ul>
-</nav>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="HW1.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -262,10 +262,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="question-1" class="level2">
-<h2 class="anchored" data-anchor-id="question-1">Question 1</h2>
-<section id="part-a" class="level3">
-<h3 class="anchored" data-anchor-id="part-a">Part a</h3>
+<section id="question-1" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="question-1"><span class="header-section-number">1</span> Question 1</h2>
+<section id="part-a" class="level3" data-number="1.1">
+<h3 data-number="1.1" class="anchored" data-anchor-id="part-a"><span class="header-section-number">1.1</span> Part a</h3>
 <p>A benefit of using the Wilcox signed rank test is that the researchers don’t have to assume normality for the underlying population distribution, as that is unknown and the sample size is not large enough for the CLT. However, there are a few concerns to using this test:</p>
 <ol type="1">
 <li><p>The data collected are proportions that represent the number of times the GWL dogs correctly retrieved the new toy when requested out of 12 requests. The fact that this data is discrete with only 13 possible unique observations leads to multiple tied observations in the data. Using the exact Wilcoxon distribution could be an issue due to having many ties, and the authors would need to account for them in order to use an accurate Wilcoxon distribution.</p></li>
@@ -274,30 +274,39 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ol>
 <p>A one-sample t-test is constrained by the assumption that the population is normally distributed and the population variance exists, both of which we don’t know, and the sample size of n = 10 does not satisfy the CLT. Since the sample data is skewed left, we don’t have evidence that the population distribution is normally distributed from the sample data. Moreover, a one-sample z-test for proportions also does not have a sample size large enough for the CLT. Due to the issues with the sample size, I think the best choice would be to use an exact binomial test because we don’t have to worry about our population data being normally distributed or about the CLT (relies on the binomial distribution). We can frame the data to be Bernoulli by interpreting each dog as a success if it retrieved the new toy correctly more than 50% of the time.</p>
 </section>
-<section id="part-b" class="level3">
-<h3 class="anchored" data-anchor-id="part-b">Part b</h3>
+<section id="part-b" class="level3" data-number="1.2">
+<h3 data-number="1.2" class="anchored" data-anchor-id="part-b"><span class="header-section-number">1.2</span> Part b</h3>
 <p>We are aiming to evaluate whether GWL dogs can correctly retrieve a new toy when requested better than chance (50%), aftering overhearing two people reference the object while not addressing the dog. n = 10 dogs were requested 12 times to retrieve the new toy, and our data present the proportion of times the dog correctly retrieved it.</p>
 <p>Our null hypothesis is that H0: p = 0.50 and Ha: p &gt; 0.50 and conducting a one-sided exact binomial test using alpha = 0.05, where a success means that the dog retrieved the new toy correctly more than half the time. We decided to use the exact binomial test because we violate no assumptions; our data does not satisfy the normality/CLT condition for a one-sample t-test, does not satisfy the symmetric assumption for a Wilcox signed rank test, and does not satisfy the sample size / CLT condition for a one-sample z-test for proportions.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>dat.dogs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.0000</span>, <span class="fl">1.0000</span>, <span class="fl">0.7500</span>, <span class="fl">1.0000</span>, <span class="fl">0.4167</span>, <span class="fl">0.8333</span>, <span class="fl">0.7500</span>, <span class="fl">0.8333</span>, <span class="fl">0.8333</span>, <span class="fl">1.0000</span>) <span class="co"># data </span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>successes <span class="ot">&lt;-</span> <span class="fu">sum</span>(dat.dogs <span class="sc">&gt;</span> <span class="fl">0.50</span>)    <span class="co"># counts dogs better than chance (p &gt; 0.50)</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fu">length</span>(dat.dogs)                <span class="co"># sample size (number of dogs)</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>test.result <span class="ot">&lt;-</span> <span class="fu">binom.test</span>(<span class="at">x =</span> successes,            <span class="co"># number of successes (p &gt; 0.50)</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>                          <span class="at">n =</span> n,                    <span class="co"># sample size (trials)</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>                          <span class="at">p =</span> <span class="fl">0.50</span>,                 <span class="co"># p0 = 0.50</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>                          <span class="at">alternative =</span> <span class="st">"greater"</span>)  <span class="co"># one-sided test</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>(test.stat <span class="ot">&lt;-</span> test.result<span class="sc">$</span>statistic) <span class="co"># test statistic</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-label="1"></a>dat.dogs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.0000</span>, <span class="fl">1.0000</span>, <span class="fl">0.7500</span>, <span class="fl">1.0000</span>, <span class="fl">0.4167</span>, <span class="fl">0.8333</span>, <span class="fl">0.7500</span>, <span class="fl">0.8333</span>, <span class="fl">0.8333</span>, <span class="fl">1.0000</span>) <span class="co"># data </span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-label="2"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-label="3"></a>successes <span class="ot">&lt;-</span> <span class="fu">sum</span>(dat.dogs <span class="sc">&gt;</span> <span class="fl">0.50</span>)    <span class="co"># counts dogs better than chance (p &gt; 0.50)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-label="4"></a>n <span class="ot">&lt;-</span> <span class="fu">length</span>(dat.dogs)                <span class="co"># sample size (number of dogs)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-label="5"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-label="6"></a>test.result <span class="ot">&lt;-</span> <span class="fu">binom.test</span>(<span class="at">x =</span> successes,            <span class="co"># number of successes (p &gt; 0.50)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-label="7"></a>                          <span class="at">n =</span> n,                    <span class="co"># sample size (trials)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-label="8"></a>                          <span class="at">p =</span> <span class="fl">0.50</span>,                 <span class="co"># p0 = 0.50</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-label="9"></a>                          <span class="at">alternative =</span> <span class="st">"greater"</span>)  <span class="co"># one-sided test</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-label="10"></a>(test.stat <span class="ot">&lt;-</span> test.result<span class="sc">$</span>statistic) <span class="co"># test statistic</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code>number of successes 
                   9 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>(p_val <span class="ot">&lt;-</span> test.result<span class="sc">$</span>p.value)       <span class="co"># p-value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-label="1"></a>(p_val <span class="ot">&lt;-</span> test.result<span class="sc">$</span>p.value)       <span class="co"># p-value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.01074219</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>(CI    <span class="ot">&lt;-</span> test.result<span class="sc">$</span>conf.int)      <span class="co"># 95% confidence interval</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-label="1"></a>(CI    <span class="ot">&lt;-</span> test.result<span class="sc">$</span>conf.int)      <span class="co"># 95% confidence interval</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.6058367 1.0000000
 attr(,"conf.level")
@@ -307,51 +316,57 @@ attr(,"conf.level")
 <p>Our p-value (p_val = 0.0107) is less than alpha = 0.05, and we have statistically discernible evidence to conclude that the true proportion of correct retrievals is greater than 0.50. We can say with 95% confidence that the true proportion of correct retrievals of the new toy out of 12 requests lies between [0.61, 1.00].</p>
 </section>
 </section>
-<section id="question-2" class="level2">
-<h2 class="anchored" data-anchor-id="question-2">Question 2</h2>
-<section id="part-a-1" class="level3">
-<h3 class="anchored" data-anchor-id="part-a-1">Part a</h3>
+<section id="question-2" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="question-2"><span class="header-section-number">2</span> Question 2</h2>
+<section id="part-a-1" class="level3" data-number="2.1">
+<h3 data-number="2.1" class="anchored" data-anchor-id="part-a-1"><span class="header-section-number">2.1</span> Part a</h3>
 <p>The major issue with the binomial test here is that the number of trials is very low, in addition to already having a low sample size of n = 10. This might decrease the accuracy of the binomial distribution at predicting the true proportion of correctly selecting the new toy when requested. The conditions of the exact binomial test require that there be a fixed number of trials (2), and that each trial ends in a success or a failure. Additionally, the trials must be independent from one another, which is not satisfied in the 2 new toy trials, but would be satisfied if measuring the overall success of each dog as a separate 10 trials. Lastly, the binomial test assumes that the probability of success is the same across each trial, which is assumed to be p = 0.50.</p>
 </section>
-<section id="part-b-1" class="level3">
-<h3 class="anchored" data-anchor-id="part-b-1">Part b</h3>
+<section id="part-b-1" class="level3" data-number="2.2">
+<h3 data-number="2.2" class="anchored" data-anchor-id="part-b-1"><span class="header-section-number">2.2</span> Part b</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>dat.dogs2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="dv">10</span>) <span class="co"># data</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>n2 <span class="ot">&lt;-</span> <span class="fu">length</span>(dat.dogs2)  <span class="co"># sample size</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>successes2 <span class="ot">&lt;-</span> <span class="fu">sum</span>(dat.dogs2 <span class="sc">==</span> <span class="dv">1</span>) <span class="co"># number of successes</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>test.result2 <span class="ot">&lt;-</span> <span class="fu">binom.test</span>(<span class="at">x =</span> successes2,            <span class="co"># data</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>                           <span class="at">n =</span> n2,                    <span class="co"># number of trials</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>                           <span class="at">p =</span> <span class="fl">0.25</span>,                 <span class="co"># p0 = 0.50 for each dogs indiv. trial ^ 2 trials = 0.25</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>                           <span class="at">alternative =</span> <span class="st">"greater"</span>)  <span class="co"># one-sided</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>test.result2<span class="sc">$</span>p.value</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-label="1"></a>dat.dogs2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="dv">10</span>) <span class="co"># data</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-label="2"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-label="3"></a>n2 <span class="ot">&lt;-</span> <span class="fu">length</span>(dat.dogs2)  <span class="co"># sample size</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-label="4"></a>successes2 <span class="ot">&lt;-</span> <span class="fu">sum</span>(dat.dogs2 <span class="sc">==</span> <span class="dv">1</span>) <span class="co"># number of successes</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-label="5"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-label="6"></a>test.result2 <span class="ot">&lt;-</span> <span class="fu">binom.test</span>(<span class="at">x =</span> successes2,            <span class="co"># data</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-label="7"></a>                           <span class="at">n =</span> n2,                    <span class="co"># number of trials</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-label="8"></a>                           <span class="at">p =</span> <span class="fl">0.25</span>,                 <span class="co"># p0 = 0.50 for each dogs indiv. trial ^ 2 trials = 0.25</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-label="9"></a>                           <span class="at">alternative =</span> <span class="st">"greater"</span>)  <span class="co"># one-sided</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-label="10"></a>test.result2<span class="sc">$</span>p.value</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 9.536743e-07</code></pre>
 </div>
 </div>
 <p>The probability of all 10 dogs successfully retrieving the new toy in both trials is around 0.00000095.</p>
 </section>
-<section id="part-c" class="level3">
-<h3 class="anchored" data-anchor-id="part-c">Part c</h3>
+<section id="part-c" class="level3" data-number="2.3">
+<h3 data-number="2.3" class="anchored" data-anchor-id="part-c"><span class="header-section-number">2.3</span> Part c</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">10</span>   <span class="co"># number of trials</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fl">0.25</span> <span class="co"># prob of success</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>mu_Y    <span class="ot">=</span> n<span class="sc">*</span>p             <span class="co"># mean of gaussian approx.</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>sigma_Y <span class="ot">=</span> <span class="fu">sqrt</span>(n<span class="sc">*</span>p<span class="sc">*</span>(<span class="dv">1</span><span class="sc">-</span>p)) <span class="co"># standard dev of gaussian approx.</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># P(B=b) = P(b - 0.50 &lt; Y &lt; b + 0.50) = P(Y&lt;= b + 0.50) - P(Y&lt;= b - 0.50)</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co"># P(B=10) = P(10 - 0.50 &lt; Y &lt; 10 + 0.50) = P(Y&lt;= 10 + 0.50) - P(Y&lt;= 10 - 0.50)</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>(prob <span class="ot">&lt;-</span> <span class="fu">pnorm</span>(<span class="fl">10.5</span>, mu_Y, sigma_Y) <span class="sc">-</span> <span class="fu">pnorm</span>(<span class="fl">9.5</span>, mu_Y, sigma_Y))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-label="1"></a>n <span class="ot">&lt;-</span> <span class="dv">10</span>   <span class="co"># number of trials</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-label="2"></a>p <span class="ot">&lt;-</span> <span class="fl">0.25</span> <span class="co"># prob of success</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-label="3"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-label="4"></a>mu_Y    <span class="ot">=</span> n<span class="sc">*</span>p             <span class="co"># mean of gaussian approx.</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-label="5"></a>sigma_Y <span class="ot">=</span> <span class="fu">sqrt</span>(n<span class="sc">*</span>p<span class="sc">*</span>(<span class="dv">1</span><span class="sc">-</span>p)) <span class="co"># standard dev of gaussian approx.</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-label="6"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-label="7"></a><span class="co"># P(B=b) = P(b - 0.50 &lt; Y &lt; b + 0.50) = P(Y&lt;= b + 0.50) - P(Y&lt;= b - 0.50)</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-label="8"></a><span class="co"># P(B=10) = P(10 - 0.50 &lt; Y &lt; 10 + 0.50) = P(Y&lt;= 10 + 0.50) - P(Y&lt;= 10 - 0.50)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-label="9"></a>(prob <span class="ot">&lt;-</span> <span class="fu">pnorm</span>(<span class="fl">10.5</span>, mu_Y, sigma_Y) <span class="sc">-</span> <span class="fu">pnorm</span>(<span class="fl">9.5</span>, mu_Y, sigma_Y))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 1.567447e-07</code></pre>
 </div>
 </div>
 <p>Yes, the probability obtained from the gaussian distribution approximation is around the same as the probability obtained from the binomial distribution. 0.00000095 <sub></sub> 0.00000016.</p>
 </section>
-<section id="part-d" class="level3">
-<h3 class="anchored" data-anchor-id="part-d">Part d</h3>
+<section id="part-d" class="level3" data-number="2.4">
+<h3 data-number="2.4" class="anchored" data-anchor-id="part-d"><span class="header-section-number">2.4</span> Part d</h3>
 <p>I think that, because all of the trials were a success, performing an inference might not be the best option due to having zero variability in the sample. Doing this inference, with no variability, will reject the null hypothesis unless p0 lies above some threshold. This meeans that the inference has less to do with the data and more to do with the chosen null hypothesis.</p>
 
 
