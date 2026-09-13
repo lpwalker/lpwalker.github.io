@@ -66,8 +66,8 @@
     "objectID": "about.html#education",
     "href": "about.html#education",
     "title": "About Me",
-    "section": "Education",
-    "text": "Education\nColgate University | Hamilton, NY B.A. in Applied Mathematics | Aug 2023 - May 2027",
+    "section": "1 Education",
+    "text": "1 Education\nColgate University | Hamilton, NY B.A. in Applied Mathematics | Aug 2023 - May 2027",
     "crumbs": [
       " About"
     ]
@@ -76,8 +76,8 @@
     "objectID": "about.html#technical-skills",
     "href": "about.html#technical-skills",
     "title": "About Me",
-    "section": "Technical Skills",
-    "text": "Technical Skills\n\nLanguages: R, MATLAB, Python, SAS\nTools: Positron, RStudio, Quarto, Git/GitHub, LaTeX",
+    "section": "2 Technical Skills",
+    "text": "2 Technical Skills\n\nLanguages: R, MATLAB, Python, SAS\nTools: Positron, RStudio, Quarto, Git/GitHub, LaTeX",
     "crumbs": [
       " About"
     ]
