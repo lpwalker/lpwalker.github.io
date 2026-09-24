@@ -38,6 +38,8 @@ website:
         contents:
           - text: "HW1: One Sample Inference"
             href: MATH_354/HW1.qmd
+          - text: "HW2: k Sample Inference"
+            href: MATH 354/HW2.qmd
   page-footer:
     left: "© 2026 Colgate University Student Portfolio"
     right: "[GitHub Source](https://github.com/lpwalker)"
