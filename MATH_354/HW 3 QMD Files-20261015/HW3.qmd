@@ -59,6 +59,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 #| include: false
 library(tidyverse)
 library(patchwork)
+library(tolerance)
 source("plotResiduals.R")
 source("plotInfluence.R")
 ```
@@ -405,19 +406,85 @@ Compute the estimates we derived using calculus in lecture 16:
 \widehat{\beta}_1 &= \frac{\sum_{i=1}^n (x_{1i} - \bar{x}_1)(y_i-\bar{y})}{\sum_{i=1}^n (x_{1i}-\bar{x}_1)^2}.
 \end{align*}
 
+```{r}
+# data from table above
+dat.q2 <- tibble(
+  temp     = c(25, -25, -75, -125, -175),          # x (degrees C)
+  strength = c(81.93, 76.63, 63.23, 32.13, 12.83)  # y (MPa)
+)
+
+x <- dat.q2$temp
+y <- dat.q2$strength
+
+# estimate of b1 (slope) using calculus
+b1.hat <- sum((x - mean(x)) * (y - mean(y))) / sum((x - mean(x))^2)
+
+# estimate of b0 (intercept) using calculus
+b0.hat <- mean(y) - b1.hat * mean(x)
+
+b0.hat # intercept
+b1.hat # slope
+```
+
 ## Part b
 Compute the estimates we derived using linear algebra in lecture 16: 
 $$\widehat{\boldsymbol{\beta}} = \left(\mathbf{X}'\mathbf{X}\right)^{-1} \mathbf{X}'\mathbf{Y}.$$
 **Hint:** Run `?matrix()` in `R` for a quick reminder about how to create a matrix. 
 
+```{r}
+# remake data from table above
+dat.q2 <- tibble(
+  temp     = c(25, -25, -75, -125, -175),          # x (degrees C)
+  strength = c(81.93, 76.63, 63.23, 32.13, 12.83)  # y (MPa)
+)
 
+x <- dat.q2$temp
+y <- dat.q2$strength
+
+# make matrices X and Y
+x.mat <- cbind(1, x)
+y.mat <- matrix(data = y)
+
+# compute estimates using linear algebra
+estimates <- solve(t(x.mat) %*% x.mat) %*% t(x.mat) %*% y.mat
+b0.hat.b <- estimates[1]
+b1.hat.b <- estimates[2]
+
+b0.hat.b
+b1.hat.b
+```
 
 ## Part c
 Compute the maximum likelihood estimates using `optim()` in `R` as described in lecture 16:
 $$\max_{\beta_0, \beta_1, \sigma} \mathcal{L}(\boldsymbol{\theta}=\{\beta_0, \beta_1, \sigma\}).$$
 
+```{r}
+# Negative log-likelihood where theta = c(beta0, beta1, sigma)
+neg.llike <- function(theta, x, y) {
+  b0 <-    theta[1]
+  b1 <-    theta[2]
+  sigma <- theta[3]
+  mu <- b0 + b1 * x                # E(Y | x)
+  -sum(dnorm(y, mean = mu, sd = sigma, log = TRUE))
+}
+
+mle <- optim(par = c(mean(y), 0, sd(y)),   # starting values
+             fn  = neg.llike,
+             x = x, y = y,
+             control = list(maxit = 10000, reltol = 1e-12))
+
+mle # ($par)
+```
+
 ## Part d
 Fit the model using `lm()` and plot the resulting model. Compare to the results from parts (a) through (c). 
+
+```{r}
+mod.q2 <- lm(strength ~ temp, data=dat.q2)
+summary(mod.q2)
+```
+The results match the estimates found through parts (a) -- (c). $\hat{\beta}_0 = 80.76$ (Intercept), and $\hat{\beta}_1 = 0.365$ (slope). In words, the strength at 0 degrees Celsius is 80.76 MPa and the strength will decrease by 0.365 MPa with every one-degree decrease in temperature. 
+
 
 # Question 3
 @Bracht16 evaluate MFAP4 as a biomarker for severity of fibrosis in hepatitic C patients. 
@@ -501,6 +568,56 @@ Simulate data to match regression assumptions in a loop that runs $R=1000$ times
 \end{align*}
 In each iteration, fit a regression line to the data and store the coefficient estimates. Plot the resulting estimates. What do you notice?
 
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+set.seed(1206)
+R <- 1000
+n <- 30
+
+# create a space for the estimates
+estimates_a <- tibble(b0 = rep(NA, R),
+                    b1 = rep(NA, R))
+
+# simulate the data
+for (r in 1:R) {
+  # X ~ Uniform(a = 0, b = 10)
+  dat.q4 <- tibble(x = runif(n, min = 0, max = 10)) |>
+    mutate(y = 2             # Intercept
+           + 1.5 * x         # Xi predictor
+           + rnorm(n, 0, 1)) # Gaussian distributed errors
+  
+  # model
+  mod.q4 <- lm(y ~ x, data = dat.q4)
+  
+  # store estimates
+  estimates_a$b0[r] <- coef(mod.q4)[1] # b0
+  estimates_a$b1[r] <- coef(mod.q4)[2] # b1
+}
+
+# plot the estimates
+p.b0.a <- ggplot(estimates_a, aes(x = b0)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30,
+                 fill = "lightgrey", color = "black") +
+  geom_density(color = "goldenrod", linewidth = 1) +
+  geom_vline(xintercept = 2, color = "skyblue3",
+             linetype = "dashed", linewidth = 1) +       # true beta_0
+  labs(x = expression(hat(beta)[0]), y = "Density") +
+  theme_bw()
+
+p.b1.a <- ggplot(estimates_a, aes(x = b1)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30,
+                 fill = "lightgrey", color = "black") +
+  geom_density(color = "goldenrod", linewidth = 1) +
+  geom_vline(xintercept = 1.5, color = "skyblue3",
+             linetype = "dashed", linewidth = 1) +       # true beta_1
+  labs(x = expression(hat(beta)[1]), y = "Density") +
+  theme_bw()
+
+p.b0.a | p.b1.a
+```
+The values for \hat{\beta}_0 and \hat{\beta}_1 are approximately normally distributed around their true values of 2 and 1.5, respectively. The spread of values for \hat{\beta}_0 is larger than the spread of values around \hat{\beta}_1. 
+
 ## Part b
 Simulate data to match regression assumptions in a loop that runs $R=1000$ times.
 \begin{align*}
@@ -513,6 +630,57 @@ In each iteration, fit a regression line to the data and store the coefficient e
 
 **Hint:** Use the `tolerance::r2exp()` function with `rate=1` and `shift=-1`.
 
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+set.seed(1206)
+R <- 1000
+n <- 30
+
+# create a space for the estimates
+estimates_b <- tibble(b0 = rep(NA, R),
+                    b1 = rep(NA, R))
+
+# simulate the data
+for (r in 1:R) {
+  # X ~ Uniform(a = 0, b = 10)
+  dat.q4 <- tibble(x = runif(n, min = 0, max = 10)) |>
+    mutate(y = 2             # Intercept
+           + 1.5 * x         # Xi predictor
+           # Shifted exponentially distributed errors
+           + r2exp(n, rate = 1, shift = -1)) 
+  
+  # model
+  mod.q4 <- lm(y ~ x, data = dat.q4)
+  
+  # store estimates
+  estimates_b$b0[r] <- coef(mod.q4)[1] # b0
+  estimates_b$b1[r] <- coef(mod.q4)[2] # b1
+}
+
+# plot the estimates
+p.b0.b <- ggplot(estimates_b, aes(x = b0)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30,
+                 fill = "lightgrey", color = "black") +
+  geom_density(color = "goldenrod", linewidth = 1) +
+  geom_vline(xintercept = 2, color = "skyblue3",
+             linetype = "dashed", linewidth = 1) +       # true beta_0
+  labs(x = expression(hat(beta)[0]), y = "Density") +
+  theme_bw()
+
+p.b1.b <- ggplot(estimates_b, aes(x = b1)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30,
+                 fill = "lightgrey", color = "black") +
+  geom_density(color = "goldenrod", linewidth = 1) +
+  geom_vline(xintercept = 1.5, color = "skyblue3",
+             linetype = "dashed", linewidth = 1) +       # true beta_1
+  labs(x = expression(hat(beta)[1]), y = "Density") +
+  theme_bw()
+
+p.b0.b | p.b1.b
+```
+The values for \hat{\beta}_0 and \hat{\beta}_1 are approximately normally distributed around their true values of 2 and 1.5, respectively. Again, the spread of values for \hat{\beta}_0 is larger than the spread of values around \hat{\beta}_1. The plots look very similar to the plots from part a. 
+
 ## Part c
 Simulate data to match regression assumptions in a loop that runs $R=1000$ times.
 \begin{align*}
@@ -522,4 +690,55 @@ Simulate data to match regression assumptions in a loop that runs $R=1000$ times
     n &= 30
 \end{align*}
 In each iteration, fit a regression line to the data and store the coefficient estimates. Plot the resulting estimates. What do you notice?
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+set.seed(1206)
+R <- 1000
+n <- 30
+
+# create a space for the estimates
+estimates_c <- tibble(b0 = rep(NA, R),
+                    b1 = rep(NA, R))
+
+# simulate the data
+for (r in 1:R) {
+  # X ~ Uniform(a = 0, b = 10)
+  dat.q4 <- tibble(x = runif(n, min = 0, max = 10)) |>
+    mutate(y = 2             # Intercept
+           + 1.5 * x         # Xi predictor
+           # Cauchy distributed errors
+           + rcauchy(n, location = 0, scale = 1)) 
+  
+  # model
+  mod.q4 <- lm(y ~ x, data = dat.q4)
+  
+  # store estimates
+  estimates_c$b0[r] <- coef(mod.q4)[1] # b0
+  estimates_c$b1[r] <- coef(mod.q4)[2] # b1
+}
+
+# plot the estimates
+p.b0.c <- ggplot(estimates_c, aes(x = b0)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30,
+                 fill = "lightgrey", color = "black") +
+  geom_density(color = "goldenrod", linewidth = 1) +
+  geom_vline(xintercept = 2, color = "skyblue3",
+             linetype = "dashed", linewidth = 1) +       # true beta_0
+  labs(x = expression(hat(beta)[0]), y = "Density") +
+  theme_bw()
+
+p.b1.c <- ggplot(estimates_c, aes(x = b1)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30,
+                 fill = "lightgrey", color = "black") +
+  geom_density(color = "goldenrod", linewidth = 1) +
+  geom_vline(xintercept = 1.5, color = "skyblue3",
+             linetype = "dashed", linewidth = 1) +       # true beta_1
+  labs(x = expression(hat(beta)[1]), y = "Density") +
+  theme_bw()
+
+p.b0.c | p.b1.c
+```
+The values for \hat{\beta}_0 and \hat{\beta}_1 not normally distributed around their true values of 2 and 1.5, respectively. While most of the estimates seem to center around their true values, it seems like the estimates that are different vary by a lot more than the 2 scenarios above.
 
