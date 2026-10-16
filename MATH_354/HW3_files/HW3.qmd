@@ -616,7 +616,7 @@ p.b1.a <- ggplot(estimates_a, aes(x = b1)) +
 
 p.b0.a | p.b1.a
 ```
-The values for \hat{\beta}_0 and \hat{\beta}_1 are approximately normally distributed around their true values of 2 and 1.5, respectively. The spread of values for \hat{\beta}_0 is larger than the spread of values around \hat{\beta}_1. 
+The values for $\hat{\beta}_0$ and $\hat{\beta}_1$ are approximately normally distributed around their true values of 2 and 1.5, respectively. The spread of values for $\hat{\beta}_0$ is larger than the spread of values around $\hat{\beta}_1$. 
 
 ## Part b
 Simulate data to match regression assumptions in a loop that runs $R=1000$ times.
@@ -679,7 +679,7 @@ p.b1.b <- ggplot(estimates_b, aes(x = b1)) +
 
 p.b0.b | p.b1.b
 ```
-The values for \hat{\beta}_0 and \hat{\beta}_1 are approximately normally distributed around their true values of 2 and 1.5, respectively. Again, the spread of values for \hat{\beta}_0 is larger than the spread of values around \hat{\beta}_1. The plots look very similar to the plots from part a. 
+The values for $\hat{\beta}_0$ and $\hat{\beta}_1$ are approximately normally distributed around their true values of 2 and 1.5, respectively. Again, the spread of values for $\hat{\beta}_0$ is larger than the spread of values around $\hat{\beta}_1$. The plots look very similar to the plots from part a. 
 
 ## Part c
 Simulate data to match regression assumptions in a loop that runs $R=1000$ times.
@@ -740,5 +740,5 @@ p.b1.c <- ggplot(estimates_c, aes(x = b1)) +
 
 p.b0.c | p.b1.c
 ```
-The values for \hat{\beta}_0 and \hat{\beta}_1 not normally distributed around their true values of 2 and 1.5, respectively. While most of the estimates seem to center around their true values, it seems like the estimates that are different vary by a lot more than the 2 scenarios above.
+The values for $\hat{\beta}_0$ and $\hat{\beta}_1$ not normally distributed around their true values of 2 and 1.5, respectively. While most of the estimates seem to center around their true values, it seems like the estimates that are different vary by a lot more than the 2 scenarios above.
 
