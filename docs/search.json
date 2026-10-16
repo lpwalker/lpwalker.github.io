@@ -279,5 +279,214 @@
       "Data Analysis 1",
       "HW2: k Sample Inference"
     ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-a",
+    "href": "MATH_354/HW3_files/HW3.html#part-a",
+    "title": "Homework 3 – Regression",
+    "section": "1.1 Part a",
+    "text": "1.1 Part a\nFit the regression model.\n\\[\\begin{align*}\n  Y_i =& \\beta_0  +\n       \\beta_1 x_{1i} + \\beta_2 I(x_{2i}=\\text{B})+ \\beta_3 I(x_{3i}=\\text{Treat}) + \\beta_4 I(x_{4i}=\\text{High}) +\\\\\n       & \\beta_5 x_{5i} + \\beta_6 I( x_{6i}=\\text{Group2}) + \\beta_7 x_{7i} + \\beta_8 x_{8i}+\\\\\n       & \\beta_9 (I(x_{3i}=\\text{Treat}) ~\\times~ I(x_{4i}=\\text{High})) + \\tag{Categorical $\\times$ Categorical}\\\\\n        & \\beta_{10} (x_{5i} ~\\times~ I(x_{6i}=\\text{Group2})) +\\tag{Continuous $\\times$ Categorical}\\\\\n        & \\beta_{11} (x_{7i} ~\\times~ x_{8i}) +\n         \\epsilon_i \\tag{Continuous $\\times$ Continuous}\n\\end{align*}\\]\nSolution: First, we fit the regression model using lm().\n\n\n\nCode\nmod.q1 &lt;- lm(y ~ x1 + x2 + x3*x4 + x5*x6 + x7*x8, data=dat.q1)",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-b",
+    "href": "MATH_354/HW3_files/HW3.html#part-b",
+    "title": "Homework 3 – Regression",
+    "section": "1.2 Part b",
+    "text": "1.2 Part b\nConduct a residual and outlier analysis.\nResidual Analysis\n\n\n\nCode\nplotResiduals(mod.q1)\n\n\n\n\nResidual diagnostics for the Question 1 model.\n\n\n\n\n\n The residuals follow a Gaussian distribution and appear balanced around 0. The residuals are independent via the simulated data.\nOutlier Analysis\n\n\n\nCode\nplotInfluence(mod.q1)\n\n\n\n\nResidual diagnostics for the Question 1 model.\n\n\n\n\n\n There are very few outliers, and most only have a small effect on the regression model.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-c",
+    "href": "MATH_354/HW3_files/HW3.html#part-c",
+    "title": "Homework 3 – Regression",
+    "section": "1.3 Part c",
+    "text": "1.3 Part c\nInterpret the intercept, the coefficients on \\(x_1\\) and \\(x_2\\).\n\\(\\hat{\\beta}_0\\): The expected value of \\(\\hat{Y} = 8.9653\\) when the quantitative variables \\(x_1, x_5, x_7, x_8\\) are 0 and when the categorical variables \\(x_2 = \"A\"\\), \\(x_3 = \"Control\"\\), \\(x_4 = \"Low\"\\), and \\(x_6 = \"Group1\"\\).\n\\(\\hat{\\beta}_1\\): The expected change in \\(\\hat{Y} = 2.13546\\) for a one-unit increase in \\(x_1\\), all other variables constant.\n\\(\\hat{\\beta}_2\\): The expected change in \\(\\hat{Y} = 10.02851\\) for a one-unit increase in \\(x_2\\), all other variables constant.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-d",
+    "href": "MATH_354/HW3_files/HW3.html#part-d",
+    "title": "Homework 3 – Regression",
+    "section": "1.4 Part d",
+    "text": "1.4 Part d\nUntangle and interpret the \\(x_3*x_4\\) interaction using algebra. Use Table 1 and Figure 1 for context.\n\n\n\nCode\nlibrary(emmeans)\nemm.q1d &lt;- emmeans(mod.q1, ~x3*x4) |&gt; # Don't average across levels: use |x2*x6\n            data.frame() |&gt;\n            rename(\"Mean\"  = \"emmean\",\n                   \"Lower\" = \"lower.CL\",\n                   \"Upper\" = \"upper.CL\")\n\n\n\n\n\n\n\n\nTable 1: Estimated marginal means for the model in Question 1.\n\n\n\n\n\n\nx3\nx4\nMean\nSE\ndf\nLower\nUpper\n\n\n\n\nControl\nLow\n212.9676\n1.7871\n238\n209.4470\n216.4882\n\n\nTreat\nLow\n219.4792\n1.9123\n238\n215.7120\n223.2464\n\n\nControl\nHigh\n216.4894\n1.7916\n238\n212.9601\n220.0188\n\n\nTreat\nHigh\n238.1930\n1.7631\n238\n234.7198\n241.6662\n\n\n\n\n\n\n\n\n\n\n\n\nCode\nemm.q1d &lt;- emm.q1d |&gt;\n  mutate(Observation = paste(\"(x3=\", x3, \", \", \"x4=\", x4, \")\", sep=\"\"))\nggplot(emm.q1d) + \n  geom_point(aes(x=Mean, y=Observation))+\n  geom_errorbar(aes(y=Observation,\n                    xmin=Lower, xmax=Upper),\n                width = 0.25)+\n  # facet_wrap(~x2*x6)+\n  theme_bw()+\n  xlab(\"Estimated Mean of Y\")\n\n\n\n\n\nFigure 1: Estimated marginal means for the model in Question 1.\n\n\n\n\n\n\n\n\n With all other predictors besides \\(x_3\\) and \\(x_4\\) constant, the regression looks like:\n\\[E[Y_i] = C + \\beta_3 I(x_{3i}=\\text{Treat}) + \\beta_4 I(x_{4i}=\\text{High}) + \\beta_9 (I(x_{3i}=\\text{Treat}) ~\\times~ I(x_{4i}=\\text{High}))\\] When \\(x_3 =\\) “Control” and \\(x_4 =\\) “Low”: \\[ E[Y_i] = C \\] When \\(x_3 =\\) “Treat” and \\(x_4 =\\) “Low”: \\[ E[Y_i] = C + \\beta_3\\] When \\(x_3 =\\) “Control” and \\(x_4 =\\) “High”: \\[ E[Y_i] = C + \\beta_4\\] When \\(x_3 =\\) “Treat” and \\(x_4 =\\) “High”: \\[ E[Y_i] = C + \\beta_3 + \\beta_4 + \\beta_9\\]\nAll other predictors constant, when \\(x_4 =\\) “Low”, \\(Y_i\\) is expected to increase by \\(\\beta_3 = 6.51\\) from Control to Treat. \\(x_4 =\\) “High”, \\(Y_i\\) is expected to increase by \\(\\beta_3 + \\beta_9 = 6.51 + 15.19 = 21.70\\) from Control to Treat. The effect of Treat increases as \\(x_4\\) moves from Low to High. When \\(x_3 =\\) “Control”, \\(Y_i\\) is expected to increase by \\(\\beta_4 = 3.52\\) from Low to High. When \\(x_3 =\\) “Treat”, \\(Y_i\\) is expected to increase by \\(\\beta_4 + \\beta_9 = 3.52 + 15.19 = 18.71\\) from Low to High. The effect of High increases as \\(x_3\\) moves from Control to Treat. These effects are confirmed through the table and the figure.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-e",
+    "href": "MATH_354/HW3_files/HW3.html#part-e",
+    "title": "Homework 3 – Regression",
+    "section": "1.5 Part e",
+    "text": "1.5 Part e\nUntangle and interpret the \\(x_5*x_6\\) interaction using algebra. Use Table 2 and Figure 2 for context.\n\n\n\nCode\nemm.q1e &lt;- emtrends(mod.q1, var=\"x5\", ~x5|x6) |&gt; \n            data.frame() |&gt;\n            rename(\"Slope\"  = \"x5.trend\",\n                   \"Lower\" = \"lower.CL\",\n                   \"Upper\" = \"upper.CL\") |&gt;\n            dplyr::select(x6, Slope, SE, df, Lower, Upper)\n\n\n\n\n\n\n\n\nTable 2: Estimated marginal trends for the model in Question 1.\n\n\n\n\n\n\nx6\nSlope\nSE\ndf\nLower\nUpper\n\n\n\n\nGroup1\n2.4835\n1.2942\n238\n-0.0660\n5.0330\n\n\nGroup2\n9.4309\n1.3367\n238\n6.7977\n12.0642\n\n\n\n\n\n\n\n\n In Figure 2, the slopes are the same and just the intercepts vary depending on \\(x_2\\), \\(x_3\\), and \\(x_4\\).\n\n\n\nCode\nemm.q1e &lt;- emmeans(mod.q1, ~x5*x6,\n                    at = list(x5 = seq(-3, 3, length.out=500))) |&gt; # Don't average across levels: use |x2*x3*x4\n  data.frame() |&gt;\n            rename(\"Mean\"  = \"emmean\",\n                   \"Lower\" = \"lower.CL\",\n                   \"Upper\" = \"upper.CL\")\n\nggplot(emm.q1e) + \n  geom_line(aes(x=x5, y=Mean, color=x6))+\n  geom_ribbon(aes(x=x5, ymin=Lower, ymax=Upper, fill=x6), alpha=0.25)+\n  # facet_wrap(~x2*x3*x4)+\n  theme_bw()\n\n\n\n\n\nFigure 2: Estimated marginal trends for the model in Question 1.\n\n\n\n\n\n\n\n\n\nAll other predictors constant, except \\(x_5\\) and \\(x_6\\), the regression looks like:\n\\[ E[Y_i] = C + \\beta_5 x_5 + \\beta_6 I(x_{6i}=\\text{Group2}) + \\beta_{10} (x_5 \\times I(x_{6i}=\\text{Group2})) \\] Taking the partial derivative of \\(E[Y_i]\\) with respect to \\(x_{5i}\\) gives us the slope: \\[\\frac{\\partial E[Y_i]}{\\partial x_{5i}} = \\beta_5 + \\beta_{10}\\, I(x_{6i}=\\text{Group2})\\] When \\(x_6 =\\) “Group1”, the slope of \\(x_5 = \\beta_5 = 2.48\\). When \\(x_6 =\\) “Group2”, the slope of \\(x_5 = \\beta_5 + \\beta_{10} = 2.48 + 6.95 = 9.43\\). These can be seen in Table 2. Depending on the group, \\(x_5\\) has less (Group1) or more (Group2) of an effect on \\(Y\\).\nThe difference between the two groups depends on \\(x_5\\). When \\(x_6 =\\) “Group1”: \\[E[Y_i] = C +\\beta_5 x_{5i}\\]. When \\(x_6 =\\) “Group2”: \\[E[Y_i] = C + \\beta_5 x_{5i} + \\beta_6 + \\beta_{10} x_{5i}\\]. We can see through Figure 2 that Group1 is higher than Group2 for low \\(x_5\\), and vice versa for higher \\(x_5\\).",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-f",
+    "href": "MATH_354/HW3_files/HW3.html#part-f",
+    "title": "Homework 3 – Regression",
+    "section": "1.6 Part f",
+    "text": "1.6 Part f\nUntangle and interpret the \\(x_7*x_8\\) interaction using algebra. Use Table 3 and Table 4 for context.\n\n\n\nCode\nemm.q1f.x7 &lt;- emtrends(mod.q1, var=\"x7\", ~x7|x8, \n                    at = list(x8 = mean(dat.q1$x8) + c(-1, 0 ,1)*sd(dat.q1$x8))) |&gt; \n            data.frame() |&gt;\n            rename(\"Slope\"  = \"x7.trend\",\n                   \"Lower\" = \"lower.CL\",\n                   \"Upper\" = \"upper.CL\") |&gt;\n            dplyr::select(x8, Slope, SE, df, Lower, Upper)\n\n\n\n\n\n\n\n\nTable 3: Estimated marginal trends for the model in Question 1.\n\n\n\n\n\n\nx8\nSlope\nSE\ndf\nLower\nUpper\n\n\n\n\n8.1309\n7.9230\n0.6751\n238\n6.5932\n9.2529\n\n\n10.0582\n9.7129\n0.5015\n238\n8.7250\n10.7008\n\n\n11.9854\n11.5027\n0.7396\n238\n10.0458\n12.9597\n\n\n\n\n\n\n\n\n\n\n\n\nCode\nemm.q1f.x8 &lt;- emtrends(mod.q1, var=\"x8\", ~x8|x7, \n                    at = list(x7 = mean(dat.q1$x7) + c(-1, 0 ,1)*sd(dat.q1$x7))) |&gt; \n            data.frame() |&gt;\n            rename(\"Slope\"  = \"x8.trend\",\n                   \"Lower\" = \"lower.CL\",\n                   \"Upper\" = \"upper.CL\") |&gt;\n            dplyr::select(x7, Slope, SE, df, Lower, Upper)\n\n\n\n\n\n\n\n\nTable 4: Estimated marginal trends for the model in Question 1.\n\n\n\n\n\n\nx7\nSlope\nSE\ndf\nLower\nUpper\n\n\n\n\n8.3824\n6.8569\n0.6069\n238\n5.6613\n8.0525\n\n\n10.2208\n8.5643\n0.4744\n238\n7.6297\n9.4989\n\n\n12.0592\n10.2716\n0.7325\n238\n8.8286\n11.7146\n\n\n\n\n\n\n\n\n\nA Johnson Neyman analysis using the interactions package for R (Long 2024), shows that the slope of \\(x_7\\) is statistically discernible for all observed values of \\(x_8\\) (Figure 3), and vice versa (Figure 4).\n\n\n\nCode\nlibrary(interactions)\njohnson_neyman(mod.q1, pred = x7, modx = x8, control.fdr = T)\n\n\nJOHNSON-NEYMAN INTERVAL\n\nWhen x8 is OUTSIDE the interval [-13.08, 3.35], the slope of x7 is p &lt; .05.\n\nNote: The range of observed values of x8 is [4.69, 15.07]\n\nInterval calculated using false discovery rate adjusted t = 1.97 \n\n\n\n\n\nFigure 3: Johnson Neyman interval for the model in Question 1.\n\n\n\n\n\n\n\n\n\n\n\n\nCode\njohnson_neyman(mod.q1, pred = x8, modx = x7, control.fdr = T)\n\n\nJOHNSON-NEYMAN INTERVAL\n\nWhen x7 is OUTSIDE the interval [-9.96, 4.25], the slope of x8 is p &lt; .05.\n\nNote: The range of observed values of x7 is [4.89, 14.60]\n\nInterval calculated using false discovery rate adjusted t = 1.97 \n\n\n\n\n\nFigure 4: Johnson Neyman interval for the model in Question 1.\n\n\n\n\n\n\n\n\n\nAll other predictors constant, except \\(x_7\\) and \\(x_8\\), the regression looks like:\n\\[ E[Y_i] = C + \\beta_7 x_{7i} + \\beta_8 x_{8i} + \\beta_{11} x_{7i} x_{8i} \\] Taking the partial derivative of \\(E[Y_i]\\) with respect to \\(x_{7i}\\) and \\(x_{8i}\\) gives us the slopes: \\[\\frac{\\partial E[Y_i]}{\\partial x_{7i}} = \\beta_7 + \\beta_{11} x_{8i}\\] \\[\\frac{\\partial E[Y_i]}{\\partial x_{8i}} = \\beta_8 + \\beta_{11} x_{7i}\\] In words, the effect of \\(x_7\\) on \\(Y\\) depends on \\(x_8\\) and vice versa. Both slopes are linear functions of the other predictor. For each one-unit increase in \\(x_8\\), the slope of \\(x_7\\) changes by \\(\\beta_{11} = 0.93\\), and vice versa, seen in Tables 3 and 4. Between the first and last rows of Table 3, \\(x_8\\) increases by 3.85 and the slope of \\(x_7\\) increases by 3.58, giving 3.58/3.85 = 0.93.\n\\(\\beta_7 = 0.37\\) represents the effect of \\(x_7\\) on \\(Y\\) when \\(x_8 = 0\\), and \\(\\beta_8 = -0.93\\) represents the effect of \\(x_8\\) on \\(Y\\) when \\(x_7 = 0\\). However, since the range of both predictors never reaches 0, these values aren’t meaningful by themselves.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-g",
+    "href": "MATH_354/HW3_files/HW3.html#part-g",
+    "title": "Homework 3 – Regression",
+    "section": "1.7 Part g",
+    "text": "1.7 Part g\nStandardize the continuous data and refit the regression model. Redo part f. What do you notice about the coefficient estimates and why does this make the untangling process easier?\nSolution: First, we fit the regression model using lm().\n\n\n\nCode\n# Standardize Data\ndat.z &lt;- dat.q1 |&gt;\n  mutate(across(c(x1, x5, x7, x8), ~ as.vector(scale(.))))\n# Refit Model\nmod.q1z &lt;- lm(y ~ x1 + x2 + x3*x4 + x5*x6 + x7*x8, data=dat.z)\n\n\n\n\n\n\nCode\nemm.q1g.z7 &lt;- emtrends(mod.q1z, var=\"x7\", ~x7|x8,\n                    at = list(x8 = c(-1, 0 ,1))) |&gt;\n          data.frame() |&gt;\n          rename(\"Slope\"  = \"x7.trend\",\n                 \"Lower\" = \"lower.CL\",\n                 \"Upper\" = \"upper.CL\") |&gt;\n          dplyr::select(x8, Slope, SE, df, Lower, Upper)\n\n\n\n\n\n\n\n\nTable 5: Estimated marginal trends for the model in Question 1 when quantitative variables are standardized.\n\n\n\n\n\n\nx8\nSlope\nSE\ndf\nLower\nUpper\n\n\n\n\n-1\n14.57\n1.24\n238\n12.12\n17.01\n\n\n0\n17.86\n0.92\n238\n16.04\n19.67\n\n\n1\n21.15\n1.36\n238\n18.47\n23.83\n\n\n\n\n\n\n\n\n\n\n\n\nCode\nemm.q1g.z8 &lt;- emtrends(mod.q1z, var=\"x8\", ~x8|x7,\n                      at = list(x7 = c(-1, 0 ,1)))|&gt;\n              data.frame() |&gt;\n              rename(\"Slope\"  = \"x8.trend\",\n                    \"Lower\" = \"lower.CL\",\n                    \"Upper\" = \"upper.CL\") |&gt;\n              dplyr::select(x7, Slope, SE, df, Lower, Upper)\n\n\n\n\n\n\n\n\nTable 6: Estimated marginal trends for the model in Question 1 when quantitative variables are standardized.\n\n\n\n\n\n\nx7\nSlope\nSE\ndf\nLower\nUpper\n\n\n\n\n-1\n13.22\n1.17\n238\n10.91\n15.52\n\n\n0\n16.51\n0.91\n238\n14.70\n18.31\n\n\n1\n19.80\n1.41\n238\n17.01\n22.58\n\n\n\n\n\n\n\n\n\nAFter standardization, Taking the partial derivative of \\(E[Y_i]\\) with respect to \\(z_{7i}\\) and \\(z_{8i}\\) gives us the slopes: \\[\\frac{\\partial E[Y_i]}{\\partial z_{7i}} = \\beta_7 + \\beta_{11} z_{8i}\\] \\[\\frac{\\partial E[Y_i]}{\\partial z_{8i}} = \\beta_8 + \\beta_{11} z_{7i}\\]\nAfter standardizing both predictors, the values for \\(\\beta_7, \\beta_8, \\beta_{11} = 17.86, 16.51, 3.29\\), respectively. Now, \\(\\beta_7\\) represents the increase in \\(Y\\) after a one-SD increase in \\(x_7\\) when \\(x_8\\) is at its average (\\(z_8 = 0\\)) and \\(\\beta_8\\) represents the increase in \\(Y\\) after a one-SD increase \\(x_8\\) when \\(x_7\\) is at its average (\\(z_7 = 0\\)), due to the standardization of the predictors around 0. This makes untangling easier because we can see how the effect of each predictor behaves around the average of the other predictor, which is more informative than knowing the behavior of each predictor when the other predictor was 0.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-a-1",
+    "href": "MATH_354/HW3_files/HW3.html#part-a-1",
+    "title": "Homework 3 – Regression",
+    "section": "2.1 Part a",
+    "text": "2.1 Part a\nCompute the estimates we derived using calculus in lecture 16: \\[\\begin{align*}\n\\widehat{\\beta}_0 &= \\bar{y} - \\widehat{\\beta}_1 \\bar{x}_1 \\\\\n\\widehat{\\beta}_1 &= \\frac{\\sum_{i=1}^n (x_{1i} - \\bar{x}_1)(y_i-\\bar{y})}{\\sum_{i=1}^n (x_{1i}-\\bar{x}_1)^2}.\n\\end{align*}\\]\n\n\n\nCode\n# data from table above\ndat.q2 &lt;- tibble(\n  temp     = c(25, -25, -75, -125, -175),          # x (degrees C)\n  strength = c(81.93, 76.63, 63.23, 32.13, 12.83)  # y (MPa)\n)\n\nx &lt;- dat.q2$temp\ny &lt;- dat.q2$strength\n\n# estimate of b1 (slope) using calculus\nb1.hat &lt;- sum((x - mean(x)) * (y - mean(y))) / sum((x - mean(x))^2)\n\n# estimate of b0 (intercept) using calculus\nb0.hat &lt;- mean(y) - b1.hat * mean(x)\n\nb0.hat # intercept\n\n\n[1] 80.755\n\n\nCode\nb1.hat # slope\n\n\n[1] 0.3654",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-b-1",
+    "href": "MATH_354/HW3_files/HW3.html#part-b-1",
+    "title": "Homework 3 – Regression",
+    "section": "2.2 Part b",
+    "text": "2.2 Part b\nCompute the estimates we derived using linear algebra in lecture 16: \\[\\widehat{\\boldsymbol{\\beta}} = \\left(\\mathbf{X}'\\mathbf{X}\\right)^{-1} \\mathbf{X}'\\mathbf{Y}.\\] Hint: Run ?matrix() in R for a quick reminder about how to create a matrix.\n\n\n\nCode\n# remake data from table above\ndat.q2 &lt;- tibble(\n  temp     = c(25, -25, -75, -125, -175),          # x (degrees C)\n  strength = c(81.93, 76.63, 63.23, 32.13, 12.83)  # y (MPa)\n)\n\nx &lt;- dat.q2$temp\ny &lt;- dat.q2$strength\n\n# make matrices X and Y\nx.mat &lt;- cbind(1, x)\ny.mat &lt;- matrix(data = y)\n\n# compute estimates using linear algebra\nestimates &lt;- solve(t(x.mat) %*% x.mat) %*% t(x.mat) %*% y.mat\nb0.hat.b &lt;- estimates[1]\nb1.hat.b &lt;- estimates[2]\n\nb0.hat.b\n\n\n[1] 80.755\n\n\nCode\nb1.hat.b\n\n\n[1] 0.3654",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-c-1",
+    "href": "MATH_354/HW3_files/HW3.html#part-c-1",
+    "title": "Homework 3 – Regression",
+    "section": "2.3 Part c",
+    "text": "2.3 Part c\nCompute the maximum likelihood estimates using optim() in R as described in lecture 16: \\[\\max_{\\beta_0, \\beta_1, \\sigma} \\mathcal{L}(\\boldsymbol{\\theta}=\\{\\beta_0, \\beta_1, \\sigma\\}).\\]\n\n\n\nCode\n# Negative log-likelihood where theta = c(beta0, beta1, sigma)\nneg.llike &lt;- function(theta, x, y) {\n  b0 &lt;-    theta[1]\n  b1 &lt;-    theta[2]\n  sigma &lt;- theta[3]\n  mu &lt;- b0 + b1 * x                # E(Y | x)\n  -sum(dnorm(y, mean = mu, sd = sigma, log = TRUE))\n}\n\nmle &lt;- optim(par = c(mean(y), 0, sd(y)),   # starting values\n             fn  = neg.llike,\n             x = x, y = y,\n             control = list(maxit = 10000, reltol = 1e-12))\n\nmle # ($par)\n\n\n$par\n[1] 80.754999  0.365400  6.490294\n\n$value\n[1] 16.44622\n\n$counts\nfunction gradient \n     190       NA \n\n$convergence\n[1] 0\n\n$message\nNULL",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-d-1",
+    "href": "MATH_354/HW3_files/HW3.html#part-d-1",
+    "title": "Homework 3 – Regression",
+    "section": "2.4 Part d",
+    "text": "2.4 Part d\nFit the model using lm() and plot the resulting model. Compare to the results from parts (a) through (c).\n\n\n\nCode\nmod.q2 &lt;- lm(strength ~ temp, data=dat.q2)\nsummary(mod.q2)\n\n\n\nCall:\nlm(formula = strength ~ temp, data = dat.q2)\n\nResiduals:\n    1     2     3     4     5 \n-7.96  5.01  9.88 -2.95 -3.98 \n\nCoefficients:\n            Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept) 80.75500    5.46239  14.784 0.000671 ***\ntemp         0.36540    0.05299   6.895 0.006250 ** \n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 8.379 on 3 degrees of freedom\nMultiple R-squared:  0.9406,    Adjusted R-squared:  0.9209 \nF-statistic: 47.54 on 1 and 3 DF,  p-value: 0.00625\n\n\n The results match the estimates found through parts (a) – (c). \\(\\hat{\\beta}_0 = 80.76\\) (Intercept), and \\(\\hat{\\beta}_1 = 0.365\\) (slope). In words, the strength at 0 degrees Celsius is 80.76 MPa and the strength will decrease by 0.365 MPa with every one-degree decrease in temperature.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-a-2",
+    "href": "MATH_354/HW3_files/HW3.html#part-a-2",
+    "title": "Homework 3 – Regression",
+    "section": "3.1 Part a",
+    "text": "3.1 Part a\nFit the model predicting MFAP4 using Fibrosis.Stage. Write out the resulting estimate model and interpret the coefficients.\n\n\n\nCode\nmod.q3a &lt;- lm(MFAP4 ~ Fibrosis.Stage, data = dat.mfap4)\nsummary(mod.q3a)\n\n\n\nCall:\nlm(formula = MFAP4 ~ Fibrosis.Stage, data = dat.mfap4)\n\nResiduals:\n    Min      1Q  Median      3Q     Max \n-20.318  -5.518  -2.651   2.070  81.816 \n\nCoefficients:\n                      Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)              9.230      1.102   8.378 4.73e-16 ***\nFibrosis.StageStage 1    1.301      1.372   0.948   0.3433    \nFibrosis.StageStage 2    3.154      1.444   2.184   0.0294 *  \nFibrosis.StageStage 3   11.742      1.724   6.812 2.59e-11 ***\nFibrosis.StageStage 4   15.388      1.724   8.928  &lt; 2e-16 ***\n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 10.85 on 537 degrees of freedom\nMultiple R-squared:  0.1965,    Adjusted R-squared:  0.1905 \nF-statistic: 32.84 on 4 and 537 DF,  p-value: &lt; 2.2e-16\n\n\n\nThe resulting regression model: \\[ \\hat{MFAP4_i} = 9.23 + 1.31 I(Fibrosis.Stage_i = \\text{Stage 1}) + 3.15 I(Fibrosis.Stage_i = \\text{Stage 2}) + 11.72 I(Fibrosis.Stage_i = \\text{Stage 3}) + 15.39 I(Fibrosis.Stage_i = \\text{Stage 4})\\] 9.23 represents \\(E[MFAP4_i]\\) at Stage 0. 1.31 represents the increase in \\(E[MFAP4_i]\\) from Stage 0 to Stage 1. 3.15 represents the increase in \\(E[MFAP4_i]\\) from Stage 0 to Stage 2. 11.74 represents the increase in \\(E[MFAP4_i]\\) from Stage 0 to Stage 3. 15.39 represents the increase in \\(E[MFAP4_i]\\) from Stage 0 to Stage 4.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-b-2",
+    "href": "MATH_354/HW3_files/HW3.html#part-b-2",
+    "title": "Homework 3 – Regression",
+    "section": "3.2 Part b",
+    "text": "3.2 Part b\nConduct a residual analysis on the model in part a to demonstrate how to identify when you need a log transformation.\n\n\n\nCode\nplotResiduals(mod.q3a)\n\n\n\n\nResidual diagnostics for the Question 3 model.\n\n\n\n\n\n The residuals do not appear to be Gaussian distributed, the values move away from the qq-plot as they increase. Many of the residuals are clusted around 0 or below, with only positive outliers present. This spread is conducive to a log transformation.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-c-2",
+    "href": "MATH_354/HW3_files/HW3.html#part-c-2",
+    "title": "Homework 3 – Regression",
+    "section": "3.3 Part c",
+    "text": "3.3 Part c\nFit the model predicting log(MFAP4) using Fibrosis.Stage. Use the natural log, and not the \\(\\log_2(\\cdot)\\) recorded in the data file. Write out the resulting estimate model and interpret the coefficients.\n\n\n\nCode\nmod.q3log &lt;- lm(log(MFAP4) ~ Fibrosis.Stage, data = dat.mfap4)\nsummary(mod.q3log)\n\n\n\nCall:\nlm(formula = log(MFAP4) ~ Fibrosis.Stage, data = dat.mfap4)\n\nResiduals:\n     Min       1Q   Median       3Q      Max \n-1.55668 -0.41861 -0.04282  0.35845  2.21571 \n\nCoefficients:\n                      Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)            2.02572    0.06178  32.789  &lt; 2e-16 ***\nFibrosis.StageStage 1  0.13336    0.07694   1.733 0.083637 .  \nFibrosis.StageStage 2  0.30399    0.08099   3.753 0.000193 ***\nFibrosis.StageStage 3  0.77408    0.09666   8.009 7.24e-15 ***\nFibrosis.StageStage 4  0.98957    0.09666  10.238  &lt; 2e-16 ***\n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 0.6085 on 537 degrees of freedom\nMultiple R-squared:  0.2312,    Adjusted R-squared:  0.2255 \nF-statistic: 40.38 on 4 and 537 DF,  p-value: &lt; 2.2e-16\n\n\n The resulting regression model: \\[ \\hat{MFAP4_i} = 2.03 + 0.13 I(Fibrosis.Stage_i = \\text{Stage 1}) + 0.30 I(Fibrosis.Stage_i = \\text{Stage 2}) + 0.77 I(Fibrosis.Stage_i = \\text{Stage 3}) + 0.99 I(Fibrosis.Stage_i = \\text{Stage 4})\\] 2.03 represents \\(E[ln(MFAP4_i)]\\) at Stage 0. 0.13 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 1. 0.30 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 2. 0.77 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 3. 0.99 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 4.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-d-2",
+    "href": "MATH_354/HW3_files/HW3.html#part-d-2",
+    "title": "Homework 3 – Regression",
+    "section": "3.4 Part d",
+    "text": "3.4 Part d\nConduct a residual analysis on the model in part c to demonstrate that the conditions for using regression are met.\n\n\n\nCode\nplotResiduals(mod.q3log)\n\n\n\n\nResidual diagnostics for the Question 3 model after log transformation.\n\n\n\n\n\n The residuals seem to be Gaussian distributed, and the residuals are more evenly centered around 0, with very few outliers. This is a better fit for a linear regression than the raw MFAP4 counts.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-e-1",
+    "href": "MATH_354/HW3_files/HW3.html#part-e-1",
+    "title": "Homework 3 – Regression",
+    "section": "3.5 Part e",
+    "text": "3.5 Part e\nFit the model predicting log(MFAP4) using Fibrosis.Stage, Age, and Gender. Use the natural log, and not the \\(\\log_2(\\cdot)\\) recorded in the data file. Write out the resulting estimate model and interpret the coefficients.\n\n\n\nCode\nmod.q3e &lt;- lm(log(MFAP4) ~ Fibrosis.Stage + Age + Gender, data = dat.mfap4)\nsummary(mod.q3e)\n\n\n\nCall:\nlm(formula = log(MFAP4) ~ Fibrosis.Stage + Age + Gender, data = dat.mfap4)\n\nResiduals:\n     Min       1Q   Median       3Q      Max \n-1.55799 -0.40010 -0.03682  0.35968  2.28903 \n\nCoefficients:\n                       Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)            1.518667   0.115808  13.114  &lt; 2e-16 ***\nFibrosis.StageStage 1  0.126858   0.073594   1.724  0.08533 .  \nFibrosis.StageStage 2  0.212539   0.079095   2.687  0.00743 ** \nFibrosis.StageStage 3  0.598866   0.096575   6.201 1.12e-09 ***\nFibrosis.StageStage 4  0.828547   0.097208   8.523  &lt; 2e-16 ***\nAge                    0.013110   0.002123   6.175 1.31e-09 ***\nGendermale            -0.143405   0.050807  -2.823  0.00494 ** \n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 0.5812 on 535 degrees of freedom\nMultiple R-squared:  0.3012,    Adjusted R-squared:  0.2934 \nF-statistic: 38.44 on 6 and 535 DF,  p-value: &lt; 2.2e-16\n\n\n The resulting regression model: \\[ \\hat{MFAP4_i} = 1.52 +  I(Fibrosis.Stage_i = \\text{Stage 1}) + 0.30 I(Fibrosis.Stage_i = \\text{Stage 2}) + 0.77 I(Fibrosis.Stage_i = \\text{Stage 3}) + 0.99 I(Fibrosis.Stage_i = \\text{Stage 4})\\]\n2.03 represents \\(E[ln(MFAP4_i)]\\) at Stage 0. 0.13 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 1. 0.21 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 2. 0.60 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 3. 0.83 represents the increase in \\(E[ln(MFAP4_i)]\\) from Stage 0 to Stage 4. 0.01 represents the change in \\(E[ln(MFAP4_i)]\\) after a one-year increase in age. -0.14 represents the change in \\(E[ln(MFAP4)]\\) from female to male patients.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-a-3",
+    "href": "MATH_354/HW3_files/HW3.html#part-a-3",
+    "title": "Homework 3 – Regression",
+    "section": "4.1 Part a",
+    "text": "4.1 Part a\nSimulate data to match regression assumptions in a loop that runs \\(R=1000\\) times. \\[\\begin{align*}\n    x_i &\\sim \\text{Uniform}(a=0,b=10)\\\\\n    \\epsilon_i &\\sim \\text{Gaussian}(\\mu=0, \\sigma=1)\\\\\n    y_i &= 2 + 1.5 x_i + \\epsilon_i\\\\\n    n &= 30\n\\end{align*}\\] In each iteration, fit a regression line to the data and store the coefficient estimates. Plot the resulting estimates. What do you notice?\n\n\n\nCode\nset.seed(1206)\nR &lt;- 1000\nn &lt;- 30\n\n# create a space for the estimates\nestimates_a &lt;- tibble(b0 = rep(NA, R),\n                    b1 = rep(NA, R))\n\n# simulate the data\nfor (r in 1:R) {\n  # X ~ Uniform(a = 0, b = 10)\n  dat.q4 &lt;- tibble(x = runif(n, min = 0, max = 10)) |&gt;\n    mutate(y = 2             # Intercept\n           + 1.5 * x         # Xi predictor\n           + rnorm(n, 0, 1)) # Gaussian distributed errors\n  \n  # model\n  mod.q4 &lt;- lm(y ~ x, data = dat.q4)\n  \n  # store estimates\n  estimates_a$b0[r] &lt;- coef(mod.q4)[1] # b0\n  estimates_a$b1[r] &lt;- coef(mod.q4)[2] # b1\n}\n\n# plot the estimates\np.b0.a &lt;- ggplot(estimates_a, aes(x = b0)) +\n  geom_histogram(aes(y = after_stat(density)), bins = 30,\n                 fill = \"lightgrey\", color = \"black\") +\n  geom_density(color = \"goldenrod\", linewidth = 1) +\n  geom_vline(xintercept = 2, color = \"skyblue3\",\n             linetype = \"dashed\", linewidth = 1) +       # true beta_0\n  labs(x = expression(hat(beta)[0]), y = \"Density\") +\n  theme_bw()\n\np.b1.a &lt;- ggplot(estimates_a, aes(x = b1)) +\n  geom_histogram(aes(y = after_stat(density)), bins = 30,\n                 fill = \"lightgrey\", color = \"black\") +\n  geom_density(color = \"goldenrod\", linewidth = 1) +\n  geom_vline(xintercept = 1.5, color = \"skyblue3\",\n             linetype = \"dashed\", linewidth = 1) +       # true beta_1\n  labs(x = expression(hat(beta)[1]), y = \"Density\") +\n  theme_bw()\n\np.b0.a | p.b1.a\n\n\n\n\n\n\n\n\n\n The values for _0 and _1 are approximately normally distributed around their true values of 2 and 1.5, respectively. The spread of values for _0 is larger than the spread of values around _1.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-b-3",
+    "href": "MATH_354/HW3_files/HW3.html#part-b-3",
+    "title": "Homework 3 – Regression",
+    "section": "4.2 Part b",
+    "text": "4.2 Part b\nSimulate data to match regression assumptions in a loop that runs \\(R=1000\\) times. \\[\\begin{align*}\n    x_i &\\sim \\text{Uniform}(a=0,b=10)\\\\\n    \\epsilon_i &\\sim \\text{Shifted Exponential}(\\lambda=1, \\mu=0)\\\\\n    y_i &= 2 + 1.5 x_i + \\epsilon_i\\\\\n    n &= 30\n\\end{align*}\\] In each iteration, fit a regression line to the data and store the coefficient estimates. Plot the resulting estimates. What do you notice?\nHint: Use the tolerance::r2exp() function with rate=1 and shift=-1.\n\n\n\nCode\nset.seed(1206)\nR &lt;- 1000\nn &lt;- 30\n\n# create a space for the estimates\nestimates_b &lt;- tibble(b0 = rep(NA, R),\n                    b1 = rep(NA, R))\n\n# simulate the data\nfor (r in 1:R) {\n  # X ~ Uniform(a = 0, b = 10)\n  dat.q4 &lt;- tibble(x = runif(n, min = 0, max = 10)) |&gt;\n    mutate(y = 2             # Intercept\n           + 1.5 * x         # Xi predictor\n           # Shifted exponentially distributed errors\n           + r2exp(n, rate = 1, shift = -1)) \n  \n  # model\n  mod.q4 &lt;- lm(y ~ x, data = dat.q4)\n  \n  # store estimates\n  estimates_b$b0[r] &lt;- coef(mod.q4)[1] # b0\n  estimates_b$b1[r] &lt;- coef(mod.q4)[2] # b1\n}\n\n# plot the estimates\np.b0.b &lt;- ggplot(estimates_b, aes(x = b0)) +\n  geom_histogram(aes(y = after_stat(density)), bins = 30,\n                 fill = \"lightgrey\", color = \"black\") +\n  geom_density(color = \"goldenrod\", linewidth = 1) +\n  geom_vline(xintercept = 2, color = \"skyblue3\",\n             linetype = \"dashed\", linewidth = 1) +       # true beta_0\n  labs(x = expression(hat(beta)[0]), y = \"Density\") +\n  theme_bw()\n\np.b1.b &lt;- ggplot(estimates_b, aes(x = b1)) +\n  geom_histogram(aes(y = after_stat(density)), bins = 30,\n                 fill = \"lightgrey\", color = \"black\") +\n  geom_density(color = \"goldenrod\", linewidth = 1) +\n  geom_vline(xintercept = 1.5, color = \"skyblue3\",\n             linetype = \"dashed\", linewidth = 1) +       # true beta_1\n  labs(x = expression(hat(beta)[1]), y = \"Density\") +\n  theme_bw()\n\np.b0.b | p.b1.b\n\n\n\n\n\n\n\n\n\n The values for _0 and _1 are approximately normally distributed around their true values of 2 and 1.5, respectively. Again, the spread of values for _0 is larger than the spread of values around _1. The plots look very similar to the plots from part a.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
+  },
+  {
+    "objectID": "MATH_354/HW3_files/HW3.html#part-c-3",
+    "href": "MATH_354/HW3_files/HW3.html#part-c-3",
+    "title": "Homework 3 – Regression",
+    "section": "4.3 Part c",
+    "text": "4.3 Part c\nSimulate data to match regression assumptions in a loop that runs \\(R=1000\\) times. \\[\\begin{align*}\n    x_i &\\sim \\text{Uniform}(a=0,b=10)\\\\\n    \\epsilon_i &\\sim \\text{Cauchy}(m=0, s=1)\\\\\n    y_i &= 2 + 1.5 x_i + \\epsilon_i\\\\\n    n &= 30\n\\end{align*}\\] In each iteration, fit a regression line to the data and store the coefficient estimates. Plot the resulting estimates. What do you notice?\n\n\n\nCode\nset.seed(1206)\nR &lt;- 1000\nn &lt;- 30\n\n# create a space for the estimates\nestimates_c &lt;- tibble(b0 = rep(NA, R),\n                    b1 = rep(NA, R))\n\n# simulate the data\nfor (r in 1:R) {\n  # X ~ Uniform(a = 0, b = 10)\n  dat.q4 &lt;- tibble(x = runif(n, min = 0, max = 10)) |&gt;\n    mutate(y = 2             # Intercept\n           + 1.5 * x         # Xi predictor\n           # Cauchy distributed errors\n           + rcauchy(n, location = 0, scale = 1)) \n  \n  # model\n  mod.q4 &lt;- lm(y ~ x, data = dat.q4)\n  \n  # store estimates\n  estimates_c$b0[r] &lt;- coef(mod.q4)[1] # b0\n  estimates_c$b1[r] &lt;- coef(mod.q4)[2] # b1\n}\n\n# plot the estimates\np.b0.c &lt;- ggplot(estimates_c, aes(x = b0)) +\n  geom_histogram(aes(y = after_stat(density)), bins = 30,\n                 fill = \"lightgrey\", color = \"black\") +\n  geom_density(color = \"goldenrod\", linewidth = 1) +\n  geom_vline(xintercept = 2, color = \"skyblue3\",\n             linetype = \"dashed\", linewidth = 1) +       # true beta_0\n  labs(x = expression(hat(beta)[0]), y = \"Density\") +\n  theme_bw()\n\np.b1.c &lt;- ggplot(estimates_c, aes(x = b1)) +\n  geom_histogram(aes(y = after_stat(density)), bins = 30,\n                 fill = \"lightgrey\", color = \"black\") +\n  geom_density(color = \"goldenrod\", linewidth = 1) +\n  geom_vline(xintercept = 1.5, color = \"skyblue3\",\n             linetype = \"dashed\", linewidth = 1) +       # true beta_1\n  labs(x = expression(hat(beta)[1]), y = \"Density\") +\n  theme_bw()\n\np.b0.c | p.b1.c\n\n\n\n\n\n\n\n\n\n The values for _0 and _1 not normally distributed around their true values of 2 and 1.5, respectively. While most of the estimates seem to center around their true values, it seems like the estimates that are different vary by a lot more than the 2 scenarios above.",
+    "crumbs": [
+      "Data Analysis 1",
+      "HW3: Regression"
+    ]
   }
 ]
