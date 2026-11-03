@@ -143,8 +143,7 @@ framing <- dat |>
     education = factor(education,
                        levels = c("Less than high school", "High school graduate",
                                   "Some college", "2 year degree", "4 year degree",
-                                  "Professional degree", "Doctorate")) |>
-                fct_relevel("4 year degree"),   # largest group is reference
+                                  "Professional degree", "Doctorate")),
     frame_attribute   = factor(if_else(treatment1 == "pos1", "Positive", "Negative"),
                           levels = c("Negative", "Positive")),
     frame_goal  = factor(if_else(treatment2 == "pos2", "Positive", "Negative"),
@@ -237,24 +236,34 @@ ggpairs(framing,
 Pairwise plots to check collinearity between predictors. None of the demographic variables are strongly related to another (@fig-pairs-covariates). The clearest pattern is that Republicans are a few years older on average than the other political groups. 
  
 ```{r}
-#| label: fig-pairs-scenario
-#| fig-cap: "Pairwise plots of the rating, frame, and age for each scenario."
-#| fig-subcap:
-#|   - "Attribute framing (drug efficacy)"
-#|   - "Goal framing (stop cocoa)"
-#|   - "Risky-choice framing (disease)"
-#| layout-ncol: 1
-#| fig-width: 7
+#| label: fig-pairs-attribute
+#| fig-cap: "Pairwise plots for attribute framing (drug efficacy)."
+#| fig-width: 6
 #| fig-height: 5
 #| message: false
 ggpairs(framing, columns = c("resp_attribute", "frame_attribute", "age"),
         mapping = aes(color = frame_attribute, alpha = 0.5), progress = FALSE) +
   theme_bw()
- 
+```
+
+```{r}
+#| label: fig-pairs-goal
+#| fig-cap: "Pairwise plots for goal framing (stop cocoa)."
+#| fig-width: 6
+#| fig-height: 5
+#| message: false
 ggpairs(framing, columns = c("resp_goal", "frame_goal", "age"),
         mapping = aes(color = frame_goal, alpha = 0.5), progress = FALSE) +
   theme_bw()
- 
+```
+
+```{r}
+#| label: fig-pairs-risky
+#| fig-cap: "Pairwise plots for risky-choice framing (disease)."
+#| fig-width: 6
+#| fig-height: 5
+#| message: false
+#| warning: false
 ggpairs(framing, columns = c("resp_risky", "frame_risky", "age"),
         mapping = aes(color = frame_risky, alpha = 0.5), progress = FALSE) +
   theme_bw()
@@ -276,30 +285,35 @@ library(interactions)  # johnson_neyman()
 library(sandwich)      # vcovHC() for the robustness check
 ```
  
-**Analysis strategy.** We fit one multiple linear regression per scenario:
- 
+For each scenario \in \{\text{attribute}, \text{goal}, \text{risky}\}$, we fit
+
 $$
-\widehat{\text{Rating}}_i = \beta_0 + \underbrace{\cdots}_{\text{gender, ethnicity, politics, education}} + \beta_1 I(\text{Frame}_i = \text{Pos}) + \beta_2\,\text{Age}_i + \beta_3\, I(\text{Frame}_i = \text{Pos})\,\text{Age}_i
+\begin{aligned}
+\widehat{Y}_{i,s} = \;& \beta_0
+ + \beta_1 I(\text{Frame}_{i} = \text{Pos})
+ + \beta_2 \,\text{Age}_i
+ + \beta_3 \, I(\text{Frame}_{i} = \text{Pos}) \times \text{Age}_i \\
+&+ \beta_4 I(\text{Gender}_i = \text{Male})
+ + \beta_5 I(\text{Gender}_i = \text{Non-binary}) \\
+&+ \beta_6 I(\text{Eth}_i = \text{Asian})
+ + \beta_7 I(\text{Eth}_i = \text{Black})
+ + \beta_8 I(\text{Eth}_i = \text{Native Hawaiian/Pacific Islander}) \\
+&+ \beta_9 I(\text{Eth}_i = \text{Other})
+ + \beta_{10} I(\text{Eth}_i = \text{White}) \\
+&+ \beta_{11} I(\text{Pol}_i = \text{Independent})
+ + \beta_{12} I(\text{Pol}_i = \text{Republican})
+ + \beta_{13} I(\text{Pol}_i = \text{Something else}) \\
+&+ \beta_{14} I(\text{Edu}_i = \text{High school})
+ + \beta_{15} I(\text{Edu}_i = \text{Some college})
+ + \beta_{16} I(\text{Edu}_i = \text{2-year}) \\
+&+ \beta_{17} I(\text{Edu}_i = \text{4-year})
+ + \beta_{18} I(\text{Edu}_i = \text{Professional})
+ + \beta_{19} I(\text{Edu}_i = \text{Doctorate})
+ \end{aligned}
 $$
- 
-- **Why the frame × age interaction:** The research question is whether the *effect of the frame* changes with age, which is exactly what the interaction measures. $\beta_3$ is the difference between the age slopes of the positive and negative frames. The paper fit the same structure.
-- **Term order:** The demographic adjustment variables go first, so the sequential (Type I) `anova()` tests for frame, age and the interaction are all adjusted for demographics. The interaction is entered last, so its $F$-test matches its $t$-test.
-- **Age is left uncentered:** As a result, $\beta_1$ is the framing effect at age 0, which is not meaningful by itself. We interpret the frame and age effects through estimated marginal means and trends instead.
- 
-Each model is checked against the conditions for use:
- 
-- *Representativeness:* the sample is an MTurk convenience sample, which we discuss in the Discussion.
-- *Independence:* each person contributes one rating per model, and frames were randomly assigned.
-- *Linearity:* assessed with the LOESS curves in @fig-age-frame.
-- *Gaussian, constant-variance errors:* assessed with residual plots.
-- *Influence:* assessed with leverage, Cook's distance, DFFITS and studentized residuals.
-- *Multicollinearity:* assessed with VIFs.
- 
-Post hoc procedures then answer the three research questions:
- 
-1. **Does the framing effect change with age?** We test the interaction with an $F$-test and give its effect size.
-2. **Is any change driven by the positive or the negative frame?** We use `emtrends()` to estimate the age slope within each frame.
-3. **At what age does the effect onset?** We estimate the framing effect at specific ages with `emmeans()`, and we run a Johnson-Neyman analysis with false-discovery-rate control.
+
+where $\widehat{Y}_{i}$ is participant $i$'s predicted 1–6 rating in each scenario and $I(\cdot)$ equals 1 when the condition holds and 0 otherwise. The reference participant is a Female, American Indian or Alaska Native, Democrat with Less than a high school education who saw the negative frame. Each model has $p = 20$ coefficients.
+
  
 ```{r}
 #| label: reg-helpers
@@ -429,15 +443,10 @@ augment(m_att) |> group_by(frame_attribute) |> summarize(resid_sd = sd(.resid)) 
 # VIF on the additive model (the interaction inflates VIF by construction)
 vif(lm(resp_attribute ~ gender + ethnicity + politics + education + frame_attribute + age,
        data = framing))
- 
-# Box-Cox: lambda that maximizes the likelihood
-bc <- MASS::boxcox(m_att, plotit = FALSE); bc$x[which.max(bc$y)]
 ```
  
-- **Gaussian errors:** Because the response is a 1–6 rating with nearly all values at 4 or 5, the residuals fall in diagonal bands (@fig-resid-att). The Q-Q plot shows a heavier lower tail, i.e., left skew. With n = `r k_att$n`, the coefficient tests are robust to this, because the sampling distributions of the $\hat\beta$s are approximately Gaussian by the CLT.
-- **Constant variance:** The residuals are somewhat more spread out under the negative frame than the positive frame. Below, we check whether this matters using heteroscedasticity-robust standard errors.
-- **Box-Cox:** It pushes toward $\lambda = 2$, which reflects the pile-up near the top of the scale. Squaring a Likert rating has no sensible interpretation, so we keep the response untransformed.
-- **Influence:** The few high-leverage points (@fig-infl-att) are participants in demographic categories with only two people. None of them is influential: every Cook's distance is far below the moderate cutoff, and the studentized residuals are mostly within ±3.
+- **Gaussian errors:** Because the response is a 1–6 rating with nearly all values at 4 or 5, the residuals fall in diagonal bands (@fig-resid-att). Otherwise, the residuals look approximately Gaussian, with few outliers and influential points. 
+- **Constant variance:** The residuals are slightly more spread out under the negative frame than the positive frame. 
 - **Multicollinearity:** All $\text{GVIF}^{1/(2\,\text{Df})}$ values are close to 1, so there is no multicollinearity.
  
 **Overall $F$-test and effect size.**
@@ -466,7 +475,7 @@ term_effects(m_att)
 coef_table(m_att)
 ```
  
-The frame × age interaction is not statistically discernible ($\hat\beta_3$ = `r round(k_att$int_b, 4)`, `r fp(k_att$int_p)`), and its effect size is very small. We still run the post hoc procedures, because the research question asks about them directly. They should be read as describing trends rather than confirming a change with age.
+The frame × age interaction is not statistically discernible ($\hat\beta_3$ = 0.008, `r fp(k_att$int_p)`), and its effect size is very small. 
  
 **Post hoc testing.**
  
@@ -517,7 +526,7 @@ jn_att <- johnson_neyman(m_att_jn, pred = pos, modx = age, control.fdr = TRUE)
 jn_att
 ```
  
-**Summary.**
+**Summary**
  
 - **Framing effect:** The positive frame ("70 felt better") produces higher efficacy ratings than the negative frame ("30 did not feel better") at every age from 18 to 71 (@fig-jn-att). The effect is therefore present across the whole observed age range rather than "onsetting" at a particular age.
 - **Change with age:** The estimated gap grows by about `r round(10 * k_att$int_b, 2)` points per decade, but this increase is not statistically discernible (`r fp(k_att$int_p)`).
@@ -563,10 +572,10 @@ vif(lm(resp_goal ~ gender + ethnicity + politics + education + frame_goal + age,
 bc <- MASS::boxcox(m_goal, plotit = FALSE); bc$x[which.max(bc$y)]
 ```
  
-- **Gaussian errors:** This is the most problematic of the three models. Most participants chose 1 or 2 ("surely stop"), so the residuals are right-skewed, and the Q-Q plot bends upward in the upper tail (@fig-resid-goal).
+- **Gaussian errors:** The errors might not be Gaussian. Most participants chose 1 or 2, so the residuals are right-skewed, and the Q-Q plot bends upward in the tail (@fig-resid-goal).
 - **Constant variance:** The residual spread is larger under the positive frame.
 - **Box-Cox:** It suggests $\lambda \approx 0$, i.e., a log transformation. Following the lecture's approach, we refit the model on the log scale as a robustness check below, but keep the untransformed model as the primary analysis because it can be interpreted on the rating scale.
-- **Influence and multicollinearity:** The same conclusions as for the attribute model apply. No observation is influential, and all VIFs are close to 1.
+- **Influence and multicollinearity:** No observation is influential, and all VIFs are close to 1.
  
 **Overall $F$-test and effect size.**
  
@@ -578,7 +587,7 @@ F_to_omega2(f = k_goal$F, df = k_goal$df1, df_error = k_goal$df2)
 interpret_omega_squared(F_to_omega2(k_goal$F, k_goal$df1, k_goal$df2)$Omega2_partial, rules = "cohen1992")
 ```
  
-The model is statistically discernible but explains little of the variation ($R^2$ = `r round(k_goal$r2, 3)`, adjusted $R^2$ = `r round(k_goal$adj, 3)`; $F$(`r k_goal$df1`, `r k_goal$df2`) = `r round(k_goal$F, 2)`, `r fp(k_goal$Fp)`).
+The model is statistically discernible and explains a small portion of the variation ($R^2$ = `r round(k_goal$r2, 3)`, adjusted $R^2$ = `r round(k_goal$adj, 3)`; $F$(`r k_goal$df1`, `r k_goal$df2`) = `r round(k_goal$F, 2)`, `r fp(k_goal$Fp)`).
  
 ```{r}
 #| label: tbl-omega-goal
@@ -631,7 +640,7 @@ jn_goal
  
 - **Change with age:** The interaction is in the predicted direction ($\hat\beta_3$ = `r round(k_goal$int_b, 4)`), but it is not statistically discernible at $\alpha$ = 0.05 (`r fp(k_goal$int_p)`), and its effect size is very small.
 - **Direction:** The pattern is driven by the negative frame. Under "continuing increases cancer risk," older participants were more likely to say they would stop drinking cocoa (slope = `r round(10 * k_goal$neg_b, 3)` per decade, `r fp(k_goal$neg_p)`). Under the positive frame, age had essentially no relationship with the rating (`r round(10 * k_goal$pos_b, 3)` per decade, `r fp(k_goal$pos_p)`).
-- **Onset:** The Johnson-Neyman analysis shows that the framing effect is not discernible among the youngest adults. It becomes statistically discernible at about age `r round(max(jn_goal$bounds), 1)` and stays discernible through age 71 (@fig-jn-goal).
+- **Onset:** The Johnson-Neyman analysis shows that the framing effect is not discernible among the youngest adults. It becomes statistically discernible at about age 27 and stays discernible through age 71 (@fig-jn-goal).
  
 ## Preference for Chance Choice
  
@@ -673,11 +682,11 @@ vif(lm(resp_risky ~ gender + ethnicity + politics + education + frame_risky + ag
 bc <- MASS::boxcox(m_risky, plotit = FALSE); bc$x[which.max(bc$y)]
 ```
  
-- **Gaussian errors:** This model meets the conditions best. Ratings use the whole 1–6 scale, so the residuals are roughly symmetric. The tails are slightly lighter than Gaussian because the scale is bounded (@fig-resid-risky).
+- **Gaussian errors:**  Ratings use the whole 1–6 scale, so the residuals are roughly symmetric. The tails are slightly lighter than Gaussian because the scale is bounded (@fig-resid-risky).
 - **Constant variance:** The residual spread is similar under the two frames.
 - **Box-Cox:** $\lambda$ is between 0.5 and 1, so no transformation is needed.
-- **Influence and multicollinearity:** There are no influential points, and all VIFs are close to 1. The participant who skipped this question is excluded, giving n = `r k_risky$n`.
- 
+- **Influence and multicollinearity:** There are no influential points, and all VIFs are close to 1. 
+
 **Overall $F$-test and effect size.**
  
 ```{r}
@@ -740,41 +749,9 @@ jn_risky
 **Summary.** Risky choice is the only scenario with a statistically discernible frame × age interaction ($\hat\beta_3$ = `r round(k_risky$int_b, 4)`, `r fp(k_risky$int_p)`), although its effect size is very small.
  
 - **Direction:** The change is driven entirely by the negative frame. When the options were described in terms of deaths, preference for the risky program rose with age (`r round(10 * k_risky$neg_b, 3)` points per decade, `r fp(k_risky$neg_p)`). When they were described in terms of lives saved, age had no relationship with preference (`r round(10 * k_risky$pos_b, 3)` per decade, `r fp(k_risky$pos_p)`).
-- **Onset:** The framing effect is not discernible among the youngest participants. It becomes statistically discernible at about age `r round(max(jn_risky$bounds), 1)` and grows from there (@fig-jn-risky).
- 
-### Robustness checks
- 
-The residual analyses raised two concerns: unequal residual variance between the frames, and right skew in the goal model. We check whether either one changes the conclusions about the interaction.
- 
-```{r}
-#| label: tbl-robust
-#| tbl-cap: "Frame × age interaction (difference in age slopes, Positive − Negative) with heteroscedasticity-robust (HC3) standard errors."
-robust_int <- function(mod, frame) {
-  emtrends(mod, specs = frame, var = "age", vcov. = vcovHC(mod, type = "HC3")) |>
-    pairs(reverse = TRUE) |>
-    as.data.frame()
-}
-bind_rows(Attribute      = robust_int(m_att,   "frame_attribute"),
-          Goal           = robust_int(m_goal,  "frame_goal"),
-          `Risky choice` = robust_int(m_risky, "frame_risky"),
-          .id = "Scenario") |>
-  select(Scenario, estimate, SE, t.ratio, p.value) |>
-  kable(digits = 4)
-```
- 
-```{r}
-#| label: robust-log-goal
-m_goal_log <- lm(log(resp_goal) ~ gender + ethnicity + politics + education +
-                   frame_goal * age,
-                 data = framing)
-r <- resid_plots(m_goal_log); r$qq
-tidy(m_goal_log) |> filter(str_detect(term, "frame_goal|^age")) |> kable(digits = 4)
-```
- 
-- **Robust standard errors:** Using heteroscedasticity-robust (HC3) standard errors leaves every conclusion unchanged (@tbl-robust). The attribute and goal interactions remain not discernible, and the risky-choice interaction remains discernible.
-- **Log-transformed goal model:** Log-transforming the goal response removes most of the skew. The interaction then sits right at the $\alpha$ = 0.05 boundary, with the same direction and pattern: older adults are more likely to stop under the negative frame only. The goal-framing result is borderline, but the qualitative pattern does not depend on how we model it.
- 
+- **Onset:** The framing effect is not discernible among the youngest participants. It becomes statistically discernible at about age `r round(max(jn_risky$bounds), 1)` (@fig-jn-risky).
 
 
 # Discussion
+
 
