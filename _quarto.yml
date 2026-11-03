@@ -42,6 +42,8 @@ website:
             href: MATH_354/HW2.qmd
           - text: "HW3: Regression"
             href: MATH_354/HW3_files/HW3.qmd
+          - text: "HW4: Regression Consult"
+            href: MATH_354/HW4_files/HW4.qmd
   page-footer:
     left: "© 2026 Colgate University Student Portfolio"
     right: "[GitHub Source](https://github.com/lpwalker)"
