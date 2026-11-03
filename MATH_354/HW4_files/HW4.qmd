@@ -58,6 +58,9 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 #| label: load-packages
 #| include: false
 library(tidyverse)
+library(stringi)
+library(knitr)
+library(GGally)
 library(patchwork)
 ```
 
@@ -123,8 +126,6 @@ dat <- dat |>
          age_ok = is.na(band) |                         # early respondents weren't asked
                   between(age, parse_number(band), parse_number(str_remove(band, ".*-"))))
 
-dat |> filter(!age_ok) |> select(age, band)             # shows the mismatches
-
 dat <- dat |>
   filter(age_ok, is.na(attentioncheck) | attentioncheck == 1) |>
   select(-c(ageattentioncheck, attentioncheck, band, age_ok))
@@ -136,9 +137,9 @@ framing <- dat |>
   transmute(
     id = responseID,
     age,
-    gender    = fct_infreq(gender),       # most common level is reference
-    ethnicity = fct_infreq(ethnicity),
-    politics  = fct_infreq(politics),
+    gender    = factor(gender),       
+    ethnicity = factor(ethnicity),
+    politics  = factor(politics),
     education = factor(education,
                        levels = c("Less than high school", "High school graduate",
                                   "Some college", "2 year degree", "4 year degree",
@@ -161,20 +162,618 @@ framing_long <- framing |>
                names_to = c(".value", "scenario"), names_sep = "_") |>
   mutate(scenario = factor(scenario,
                            levels = c("attribute", "goal", "risky"),
-                           labels = c("Attribute (drug efficacy)",
-                                      "Goal (stop cocoa)",
+                           labels = c("Attribute (drug)",
+                                      "Goal (cocoa)",
                                       "Risky choice (disease)")))
 ```
 
+When I loaded the .csv file, there were extra columns and rows that were empty 
+and needed to be removed. Additionally the first two rows were the full question 
+followed by a shortened name for the column, so I made the shortened name the 
+column header and removed the row containing the survey question, and removed 
+columns that wouldn't be useful to our analysis, including reCAPTCHA score,
+confirmation, language, distribution style, and start and end date. Next, like 
+the paper, I removed participants who didn't pass the attention and age attention
+checks, then removed the columns. Lastly, I chose to remove patients who answered
+"prefer not to say" for a question (n = 10) and fixed some of the wordings of the
+framing columns so it was easier for me to understand. 
+
 # Exploratory Data Analyses
+
+```{r}
+#| label: tbl-frame-summary
+#| tbl-cap: "Ratings (1–6) and participant age by scenario and assigned frame."
+framing_long |>
+  group_by(scenario, frame) |>
+  summarize(n        = sum(!is.na(resp)),
+            mean     = mean(resp, na.rm = TRUE),
+            sd       = sd(resp, na.rm = TRUE),
+            mean_age = mean(age),
+            .groups  = "drop") |>
+  kable(digits = 2,
+        col.names = c("Scenario", "Frame", "n", "Mean rating", "SD", "Mean age"))
+```
+ 
+Random assignment worked as intended. In each scenario, the two frames have similar group sizes and similar mean ages (@tbl-frame-summary).
+ 
+**Attribute:** The drug was rated as more effective under the positive frame than under the negative frame.
+
+**Goal:** Under the negative frame, participants were more likely to say they would stop drinking cocoa.
+
+**Risky choice:** The negative frame pushed participants toward the risky option. 
+ 
+```{r}
+#| label: fig-resp-dist
+#| fig-cap: "Distribution of ratings by frame within each scenario."
+#| fig-width: 9
+#| fig-height: 3.5
+framing_long |>
+  drop_na(resp) |>
+  ggplot(aes(x = factor(resp), fill = frame)) +
+  geom_bar(aes(y = after_stat(prop), group = frame), position = "dodge") +
+  facet_wrap(~ scenario) +
+  labs(x = "Rating (1–6)", y = "Proportion within frame", fill = "Frame") +
+  theme_bw()
+```
+ 
+Distribution of positive and negative responses by framing subtype. Positive and negative attribute framing appears approximately normal. Positive and negative goal framing appears skewed right. Positive and negative risky choice framing appears approximately normal.
+ 
+### Pairwise plots
+ 
+All three models share the same adjustment variables, so we check them once for strong relationships with each other.
+ 
+```{r}
+#| label: fig-pairs-covariates
+#| fig-cap: "Pairwise plots of age and the demographic adjustment variables."
+#| fig-width: 11
+#| fig-height: 11
+#| message: false
+ggpairs(framing,
+        columns  = c("age", "gender", "ethnicity", "politics", "education"),
+        progress = FALSE) +
+  theme_bw()
+```
+ 
+Pairwise plots to check collinearity between predictors. None of the demographic variables are strongly related to another (@fig-pairs-covariates). The clearest pattern is that Republicans are a few years older on average than the other political groups. 
+ 
+```{r}
+#| label: fig-pairs-scenario
+#| fig-cap: "Pairwise plots of the rating, frame, and age for each scenario."
+#| fig-subcap:
+#|   - "Attribute framing (drug efficacy)"
+#|   - "Goal framing (stop cocoa)"
+#|   - "Risky-choice framing (disease)"
+#| layout-ncol: 1
+#| fig-width: 7
+#| fig-height: 5
+#| message: false
+ggpairs(framing, columns = c("resp_attribute", "frame_attribute", "age"),
+        mapping = aes(color = frame_attribute, alpha = 0.5), progress = FALSE) +
+  theme_bw()
+ 
+ggpairs(framing, columns = c("resp_goal", "frame_goal", "age"),
+        mapping = aes(color = frame_goal, alpha = 0.5), progress = FALSE) +
+  theme_bw()
+ 
+ggpairs(framing, columns = c("resp_risky", "frame_risky", "age"),
+        mapping = aes(color = frame_risky, alpha = 0.5), progress = FALSE) +
+  theme_bw()
+```
+Pairwise plots for each framing effect to check for linearity between framing and response, as well as collinearity between age and framing effect (minimized by randomization).
+ 
 
 # Regression Analyses
 
+```{r}
+#| label: reg-setup
+#| message: false
+#| warning: false
+library(broom)         # tidy(), augment()
+library(car)           # vif()
+library(effectsize)    # F_to_omega2(), omega_squared(), interpret_omega_squared(), standardize_parameters()
+library(emmeans)       # emmeans(), emtrends(), pairs()
+library(interactions)  # johnson_neyman()
+library(sandwich)      # vcovHC() for the robustness check
+```
+ 
+**Analysis strategy.** We fit one multiple linear regression per scenario:
+ 
+$$
+\widehat{\text{Rating}}_i = \beta_0 + \underbrace{\cdots}_{\text{gender, ethnicity, politics, education}} + \beta_1 I(\text{Frame}_i = \text{Pos}) + \beta_2\,\text{Age}_i + \beta_3\, I(\text{Frame}_i = \text{Pos})\,\text{Age}_i
+$$
+ 
+- **Why the frame × age interaction:** The research question is whether the *effect of the frame* changes with age, which is exactly what the interaction measures. $\beta_3$ is the difference between the age slopes of the positive and negative frames. The paper fit the same structure.
+- **Term order:** The demographic adjustment variables go first, so the sequential (Type I) `anova()` tests for frame, age and the interaction are all adjusted for demographics. The interaction is entered last, so its $F$-test matches its $t$-test.
+- **Age is left uncentered:** As a result, $\beta_1$ is the framing effect at age 0, which is not meaningful by itself. We interpret the frame and age effects through estimated marginal means and trends instead.
+ 
+Each model is checked against the conditions for use:
+ 
+- *Representativeness:* the sample is an MTurk convenience sample, which we discuss in the Discussion.
+- *Independence:* each person contributes one rating per model, and frames were randomly assigned.
+- *Linearity:* assessed with the LOESS curves in @fig-age-frame.
+- *Gaussian, constant-variance errors:* assessed with residual plots.
+- *Influence:* assessed with leverage, Cook's distance, DFFITS and studentized residuals.
+- *Multicollinearity:* assessed with VIFs.
+ 
+Post hoc procedures then answer the three research questions:
+ 
+1. **Does the framing effect change with age?** We test the interaction with an $F$-test and give its effect size.
+2. **Is any change driven by the positive or the negative frame?** We use `emtrends()` to estimate the age slope within each frame.
+3. **At what age does the effect onset?** We estimate the framing effect at specific ages with `emmeans()`, and we run a Johnson-Neyman analysis with false-discovery-rate control.
+ 
+```{r}
+#| label: reg-helpers
+# Residual plots: Q-Q plot and residuals vs fitted values (+/- 2 and 3 sigma)
+resid_plots <- function(mod) {
+  d <- augment(mod)
+  s <- sigma(mod)
+  qq <- ggplot(d, aes(sample = .resid)) +
+    stat_qq(alpha = 0.4) + stat_qq_line() +
+    labs(x = "Theoretical Quantiles", y = "Observed Quantiles") +
+    theme_bw()
+  rf <- ggplot(d, aes(.fitted, .resid)) +
+    geom_point(alpha = 0.4) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "deeppink3") +
+    geom_hline(yintercept = c(-2, 2) * s, linetype = "dotted", color = "steelblue") +
+    geom_hline(yintercept = c(-3, 3) * s, linetype = "dotted", color = "darkorange") +
+    labs(x = expression("Fitted Values (" * hat(Y) * ")"), y = "Residual") +
+    theme_bw()
+  list(qq = qq, rf = rf)
+}
+ 
+# Influence plots: leverage, Cook's distance, DFFITS, studentized residuals
+influence_plots <- function(mod) {
+  n <- nobs(mod); p <- length(coef(mod))
+  d <- tibble(obs = seq_len(n),
+              Leverage                 = hatvalues(mod),
+              `Cook's Distance`        = cooks.distance(mod),
+              DFFITS                   = dffits(mod),
+              `Studentized Residual`   = rstudent(mod)) |>
+    pivot_longer(-obs, names_to = "measure") |>
+    mutate(measure = fct_inorder(measure))
+  cuts <- bind_rows(
+    tibble(measure = "Leverage",             y = c(2, 3) * p / n,           level = c("Moderate", "High")),
+    tibble(measure = "Cook's Distance",      y = qf(c(0.2, 0.5), p, n - p), level = c("Moderate", "High")),
+    tibble(measure = "DFFITS",               y = c(-2, 2, -3, 3) * sqrt(p / n),
+           level = rep(c("Moderate", "High"), each = 2)),
+    tibble(measure = "Studentized Residual", y = c(-2, 2, -3, 3),
+           level = rep(c("Moderate", "High"), each = 2))
+  ) |> mutate(measure = factor(measure, levels = levels(d$measure)))
+  ggplot(d, aes(obs, value)) +
+    geom_point(size = 0.6, alpha = 0.6) +
+    geom_hline(data = cuts, aes(yintercept = y, color = level), linetype = "dotted") +
+    facet_wrap(~ measure, scales = "free_y") +
+    scale_color_manual(values = c(Moderate = "steelblue", High = "darkorange")) +
+    labs(x = "Observation Number", y = NULL, color = "Cutoff") +
+    theme_bw()
+}
+ 
+# Coefficient table with standardized coefficients
+coef_table <- function(mod) {
+  tidy(mod) |>
+    mutate(std = standardize_parameters(mod)$Std_Coefficient,
+           p.value = if_else(p.value < 0.0001, "<0.0001", as.character(round(p.value, 4)))) |>
+    kable(digits = 3, col.names = c("Term", "Estimate", "SE", "t", "p", "Std-Coef"))
+}
+ 
+# Partial omega-squared for each term in the (Type I) ANOVA
+term_effects <- function(mod) {
+  omega_squared(anova(mod)) |>
+    as_tibble() |>
+    mutate(Size = as.character(interpret_omega_squared(Omega2_partial, rules = "cohen1992"))) |>
+    select(Parameter, Omega2_partial, CI_low, CI_high, Size) |>
+    kable(digits = 3, col.names = c("Term", "Partial omega^2", "Lower", "Upper", "Size"))
+}
+ 
+# Estimated marginal means across age, by frame
+emm_plot <- function(mod, frame, ylab) {
+  emmeans(mod, specs = frame, by = "age", at = list(age = 18:71)) |>
+    as.data.frame() |>
+    ggplot(aes(age, emmean, color = .data[[frame]], fill = .data[[frame]])) +
+    geom_ribbon(aes(ymin = lower.CL, ymax = upper.CL), alpha = 0.2, color = NA) +
+    geom_line(linewidth = 1) +
+    labs(x = "Age (years)", y = ylab, color = "Frame", fill = "Frame") +
+    theme_bw()
+}
+ 
+# Key numbers for inline text
+key_stats <- function(mod, frame) {
+  s   <- summary(mod)
+  int <- tidy(mod) |> filter(str_detect(term, ":age"))
+  emt <- emtrends(mod, specs = frame, var = "age") |> test() |> as.data.frame()
+  list(n = nobs(mod), r2 = s$r.squared, adj = s$adj.r.squared,
+       F = s$fstatistic[1], df1 = s$fstatistic[2], df2 = s$fstatistic[3],
+       Fp = pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE),
+       int_b = int$estimate, int_p = int$p.value,
+       neg_b = emt$age.trend[1], neg_p = emt$p.value[1],
+       pos_b = emt$age.trend[2], pos_p = emt$p.value[2])
+}
+fp <- function(p) if (p < 0.001) "p < 0.001" else paste0("p = ", formatC(p, format = "f", digits = 3))
+```
+ 
 ## Rating Drug Efficacy
-
+ 
+```{r}
+#| label: fit-att
+m_att <- lm(resp_attribute ~ gender + ethnicity + politics + education +
+              frame_attribute * age,
+            data = framing)
+k_att <- key_stats(m_att, "frame_attribute")
+```
+ 
+**Conditions.**
+ 
+```{r}
+#| label: fig-resid-att
+#| fig-cap: "Residual diagnostics for the attribute-framing model."
+#| fig-subcap: ["Q-Q plot", "Residuals vs. fitted values"]
+#| layout-ncol: 2
+#| fig-width: 5
+#| fig-height: 4
+r <- resid_plots(m_att); r$qq; r$rf
+```
+ 
+```{r}
+#| label: fig-infl-att
+#| fig-cap: "Influence diagnostics for the attribute-framing model."
+#| fig-width: 9
+#| fig-height: 5
+influence_plots(m_att)
+```
+ 
+```{r}
+#| label: cond-att
+# Residual spread by frame (constant variance)
+augment(m_att) |> group_by(frame_attribute) |> summarize(resid_sd = sd(.resid)) |> kable(digits = 3)
+ 
+# VIF on the additive model (the interaction inflates VIF by construction)
+vif(lm(resp_attribute ~ gender + ethnicity + politics + education + frame_attribute + age,
+       data = framing))
+ 
+# Box-Cox: lambda that maximizes the likelihood
+bc <- MASS::boxcox(m_att, plotit = FALSE); bc$x[which.max(bc$y)]
+```
+ 
+- **Gaussian errors:** Because the response is a 1–6 rating with nearly all values at 4 or 5, the residuals fall in diagonal bands (@fig-resid-att). The Q-Q plot shows a heavier lower tail, i.e., left skew. With n = `r k_att$n`, the coefficient tests are robust to this, because the sampling distributions of the $\hat\beta$s are approximately Gaussian by the CLT.
+- **Constant variance:** The residuals are somewhat more spread out under the negative frame than the positive frame. Below, we check whether this matters using heteroscedasticity-robust standard errors.
+- **Box-Cox:** It pushes toward $\lambda = 2$, which reflects the pile-up near the top of the scale. Squaring a Likert rating has no sensible interpretation, so we keep the response untransformed.
+- **Influence:** The few high-leverage points (@fig-infl-att) are participants in demographic categories with only two people. None of them is influential: every Cook's distance is far below the moderate cutoff, and the studentized residuals are mostly within ±3.
+- **Multicollinearity:** All $\text{GVIF}^{1/(2\,\text{Df})}$ values are close to 1, so there is no multicollinearity.
+ 
+**Overall $F$-test and effect size.**
+ 
+```{r}
+#| label: anova-att
+anova(m_att) |> as.data.frame() |> kable(digits = 3)
+ 
+F_to_omega2(f        = k_att$F,
+            df       = k_att$df1,
+            df_error = k_att$df2)
+interpret_omega_squared(F_to_omega2(k_att$F, k_att$df1, k_att$df2)$Omega2_partial, rules = "cohen1992")
+```
+ 
+The model accounts for a statistically discernible share of the variation in efficacy ratings ($R^2$ = `r round(k_att$r2, 3)`, adjusted $R^2$ = `r round(k_att$adj, 3)`; $F$(`r k_att$df1`, `r k_att$df2`) = `r round(k_att$F, 2)`, `r fp(k_att$Fp)`). Most of this comes from the frame (@tbl-omega-att).
+ 
+```{r}
+#| label: tbl-omega-att
+#| tbl-cap: "Effect size (partial omega-squared) for each term, attribute framing."
+term_effects(m_att)
+```
+ 
+```{r}
+#| label: tbl-coef-att
+#| tbl-cap: "Coefficients for the attribute-framing model."
+coef_table(m_att)
+```
+ 
+The frame × age interaction is not statistically discernible ($\hat\beta_3$ = `r round(k_att$int_b, 4)`, `r fp(k_att$int_p)`), and its effect size is very small. We still run the post hoc procedures, because the research question asks about them directly. They should be read as describing trends rather than confirming a change with age.
+ 
+**Post hoc testing.**
+ 
+```{r}
+#| label: emt-att
+# Age slope within each frame: which frame drives any change?
+emt_att <- emtrends(m_att, specs = "frame_attribute", var = "age")
+test(emt_att) |> as.data.frame() |> kable(digits = 4)
+ 
+# Difference in slopes (= the interaction coefficient)
+pairs(emt_att, reverse = TRUE) |> as.data.frame() |> kable(digits = 4)
+ 
+# Framing effect (Positive - Negative) at selected ages, with Cohen's d
+emm_att <- emmeans(m_att, specs = "frame_attribute", by = "age",
+                   at = list(age = c(20, 30, 40, 50, 60, 70)))
+pairs(emm_att, reverse = TRUE) |>
+  as.data.frame() |>
+  mutate(d = estimate / sd(framing$resp_attribute)) |>
+  kable(digits = 3)
+```
+ 
+```{r}
+#| label: fig-emm-att
+#| fig-cap: "Estimated marginal mean efficacy rating by frame across age (95% CI), averaging over the demographic variables."
+#| fig-width: 7
+#| fig-height: 4
+emm_plot <- function(mod, frame, ylab) {
+  emmeans(mod, specs = frame, by = "age", at = list(age = 18:71),
+          nuisance = c("gender", "ethnicity", "politics", "education")) |>
+    as.data.frame() |>
+    ggplot(aes(age, emmean, color = .data[[frame]], fill = .data[[frame]])) +
+    geom_ribbon(aes(ymin = lower.CL, ymax = upper.CL), alpha = 0.2, color = NA) +
+    geom_line(linewidth = 1) +
+    labs(x = "Age (years)", y = ylab, color = "Frame", fill = "Frame") +
+    theme_bw()
+}
+```
+ 
+```{r}
+#| label: fig-jn-att
+#| fig-cap: "Johnson-Neyman plot: the framing effect (positive minus negative) across age, attribute framing."
+#| fig-width: 7
+#| fig-height: 4
+# Same model with the frame coded 0/1 so johnson_neyman() can treat it as the focal predictor
+m_att_jn <- lm(resp_attribute ~ gender + ethnicity + politics + education + pos * age,
+               data = framing |> mutate(pos = as.numeric(frame_attribute == "Positive")))
+jn_att <- johnson_neyman(m_att_jn, pred = pos, modx = age, control.fdr = TRUE)
+jn_att
+```
+ 
+**Summary.**
+ 
+- **Framing effect:** The positive frame ("70 felt better") produces higher efficacy ratings than the negative frame ("30 did not feel better") at every age from 18 to 71 (@fig-jn-att). The effect is therefore present across the whole observed age range rather than "onsetting" at a particular age.
+- **Change with age:** The estimated gap grows by about `r round(10 * k_att$int_b, 2)` points per decade, but this increase is not statistically discernible (`r fp(k_att$int_p)`).
+- **Direction:** The negative-frame slope (`r round(10 * k_att$neg_b, 3)` per decade, `r fp(k_att$neg_p)`) and the positive-frame slope (`r round(10 * k_att$pos_b, 3)` per decade, `r fp(k_att$pos_p)`) are both indistinguishable from zero. Descriptively, though, the widening comes from older adults rating the drug *lower* under the negative frame.
+ 
 ## Likelihood to Stop Drinking Cocoa
-
+ 
+```{r}
+#| label: fit-goal
+m_goal <- lm(resp_goal ~ gender + ethnicity + politics + education +
+               frame_goal * age,
+             data = framing)
+k_goal <- key_stats(m_goal, "frame_goal")
+```
+ 
+**Conditions.**
+ 
+```{r}
+#| label: fig-resid-goal
+#| fig-cap: "Residual diagnostics for the goal-framing model."
+#| fig-subcap: ["Q-Q plot", "Residuals vs. fitted values"]
+#| layout-ncol: 2
+#| fig-width: 5
+#| fig-height: 4
+r <- resid_plots(m_goal); r$qq; r$rf
+```
+ 
+```{r}
+#| label: fig-infl-goal
+#| fig-cap: "Influence diagnostics for the goal-framing model."
+#| fig-width: 9
+#| fig-height: 5
+influence_plots(m_goal)
+```
+ 
+```{r}
+#| label: cond-goal
+augment(m_goal) |> group_by(frame_goal) |> summarize(resid_sd = sd(.resid)) |> kable(digits = 3)
+ 
+vif(lm(resp_goal ~ gender + ethnicity + politics + education + frame_goal + age,
+       data = framing))
+ 
+bc <- MASS::boxcox(m_goal, plotit = FALSE); bc$x[which.max(bc$y)]
+```
+ 
+- **Gaussian errors:** This is the most problematic of the three models. Most participants chose 1 or 2 ("surely stop"), so the residuals are right-skewed, and the Q-Q plot bends upward in the upper tail (@fig-resid-goal).
+- **Constant variance:** The residual spread is larger under the positive frame.
+- **Box-Cox:** It suggests $\lambda \approx 0$, i.e., a log transformation. Following the lecture's approach, we refit the model on the log scale as a robustness check below, but keep the untransformed model as the primary analysis because it can be interpreted on the rating scale.
+- **Influence and multicollinearity:** The same conclusions as for the attribute model apply. No observation is influential, and all VIFs are close to 1.
+ 
+**Overall $F$-test and effect size.**
+ 
+```{r}
+#| label: anova-goal
+anova(m_goal) |> as.data.frame() |> kable(digits = 3)
+ 
+F_to_omega2(f = k_goal$F, df = k_goal$df1, df_error = k_goal$df2)
+interpret_omega_squared(F_to_omega2(k_goal$F, k_goal$df1, k_goal$df2)$Omega2_partial, rules = "cohen1992")
+```
+ 
+The model is statistically discernible but explains little of the variation ($R^2$ = `r round(k_goal$r2, 3)`, adjusted $R^2$ = `r round(k_goal$adj, 3)`; $F$(`r k_goal$df1`, `r k_goal$df2`) = `r round(k_goal$F, 2)`, `r fp(k_goal$Fp)`).
+ 
+```{r}
+#| label: tbl-omega-goal
+#| tbl-cap: "Effect size (partial omega-squared) for each term, goal framing."
+term_effects(m_goal)
+```
+ 
+```{r}
+#| label: tbl-coef-goal
+#| tbl-cap: "Coefficients for the goal-framing model."
+coef_table(m_goal)
+```
+ 
+**Post hoc testing.**
+ 
+```{r}
+#| label: emt-goal
+emt_goal <- emtrends(m_goal, specs = "frame_goal", var = "age")
+test(emt_goal) |> as.data.frame() |> kable(digits = 4)
+pairs(emt_goal, reverse = TRUE) |> as.data.frame() |> kable(digits = 4)
+ 
+emm_goal <- emmeans(m_goal, specs = "frame_goal", by = "age",
+                    at = list(age = c(20, 30, 40, 50, 60, 70)))
+pairs(emm_goal, reverse = TRUE) |>
+  as.data.frame() |>
+  mutate(d = estimate / sd(framing$resp_goal)) |>
+  kable(digits = 3)
+```
+ 
+```{r}
+#| label: fig-emm-goal
+#| fig-cap: "Estimated marginal mean likelihood of continuing to drink cocoa by frame across age (95% CI)."
+#| fig-width: 7
+#| fig-height: 4
+emm_plot(m_goal, "frame_goal", "Estimated rating (1 = surely stop)")
+```
+ 
+```{r}
+#| label: fig-jn-goal
+#| fig-cap: "Johnson-Neyman plot: the framing effect (positive minus negative) across age, goal framing."
+#| fig-width: 7
+#| fig-height: 4
+m_goal_jn <- lm(resp_goal ~ gender + ethnicity + politics + education + pos * age,
+                data = framing |> mutate(pos = as.numeric(frame_goal == "Positive")))
+jn_goal <- johnson_neyman(m_goal_jn, pred = pos, modx = age, control.fdr = TRUE)
+jn_goal
+```
+ 
+**Summary.**
+ 
+- **Change with age:** The interaction is in the predicted direction ($\hat\beta_3$ = `r round(k_goal$int_b, 4)`), but it is not statistically discernible at $\alpha$ = 0.05 (`r fp(k_goal$int_p)`), and its effect size is very small.
+- **Direction:** The pattern is driven by the negative frame. Under "continuing increases cancer risk," older participants were more likely to say they would stop drinking cocoa (slope = `r round(10 * k_goal$neg_b, 3)` per decade, `r fp(k_goal$neg_p)`). Under the positive frame, age had essentially no relationship with the rating (`r round(10 * k_goal$pos_b, 3)` per decade, `r fp(k_goal$pos_p)`).
+- **Onset:** The Johnson-Neyman analysis shows that the framing effect is not discernible among the youngest adults. It becomes statistically discernible at about age `r round(max(jn_goal$bounds), 1)` and stays discernible through age 71 (@fig-jn-goal).
+ 
 ## Preference for Chance Choice
+ 
+```{r}
+#| label: fit-risky
+m_risky <- lm(resp_risky ~ gender + ethnicity + politics + education +
+                frame_risky * age,
+              data = framing)
+k_risky <- key_stats(m_risky, "frame_risky")
+```
+ 
+**Conditions.**
+ 
+```{r}
+#| label: fig-resid-risky
+#| fig-cap: "Residual diagnostics for the risky-choice model."
+#| fig-subcap: ["Q-Q plot", "Residuals vs. fitted values"]
+#| layout-ncol: 2
+#| fig-width: 5
+#| fig-height: 4
+r <- resid_plots(m_risky); r$qq; r$rf
+```
+ 
+```{r}
+#| label: fig-infl-risky
+#| fig-cap: "Influence diagnostics for the risky-choice model."
+#| fig-width: 9
+#| fig-height: 5
+influence_plots(m_risky)
+```
+ 
+```{r}
+#| label: cond-risky
+augment(m_risky) |> group_by(frame_risky) |> summarize(resid_sd = sd(.resid)) |> kable(digits = 3)
+ 
+vif(lm(resp_risky ~ gender + ethnicity + politics + education + frame_risky + age,
+       data = framing))
+ 
+bc <- MASS::boxcox(m_risky, plotit = FALSE); bc$x[which.max(bc$y)]
+```
+ 
+- **Gaussian errors:** This model meets the conditions best. Ratings use the whole 1–6 scale, so the residuals are roughly symmetric. The tails are slightly lighter than Gaussian because the scale is bounded (@fig-resid-risky).
+- **Constant variance:** The residual spread is similar under the two frames.
+- **Box-Cox:** $\lambda$ is between 0.5 and 1, so no transformation is needed.
+- **Influence and multicollinearity:** There are no influential points, and all VIFs are close to 1. The participant who skipped this question is excluded, giving n = `r k_risky$n`.
+ 
+**Overall $F$-test and effect size.**
+ 
+```{r}
+#| label: anova-risky
+anova(m_risky) |> as.data.frame() |> kable(digits = 3)
+ 
+F_to_omega2(f = k_risky$F, df = k_risky$df1, df_error = k_risky$df2)
+interpret_omega_squared(F_to_omega2(k_risky$F, k_risky$df1, k_risky$df2)$Omega2_partial, rules = "cohen1992")
+```
+ 
+The model is statistically discernible ($R^2$ = `r round(k_risky$r2, 3)`, adjusted $R^2$ = `r round(k_risky$adj, 3)`; $F$(`r k_risky$df1`, `r k_risky$df2`) = `r round(k_risky$F, 2)`, `r fp(k_risky$Fp)`).
+ 
+```{r}
+#| label: tbl-omega-risky
+#| tbl-cap: "Effect size (partial omega-squared) for each term, risky-choice framing."
+term_effects(m_risky)
+```
+ 
+```{r}
+#| label: tbl-coef-risky
+#| tbl-cap: "Coefficients for the risky-choice model."
+coef_table(m_risky)
+```
+ 
+**Post hoc testing.**
+ 
+```{r}
+#| label: emt-risky
+emt_risky <- emtrends(m_risky, specs = "frame_risky", var = "age")
+test(emt_risky) |> as.data.frame() |> kable(digits = 4)
+pairs(emt_risky, reverse = TRUE) |> as.data.frame() |> kable(digits = 4)
+ 
+emm_risky <- emmeans(m_risky, specs = "frame_risky", by = "age",
+                     at = list(age = c(20, 30, 40, 50, 60, 70)))
+pairs(emm_risky, reverse = TRUE) |>
+  as.data.frame() |>
+  mutate(d = estimate / sd(framing$resp_risky, na.rm = TRUE)) |>
+  kable(digits = 3)
+```
+ 
+```{r}
+#| label: fig-emm-risky
+#| fig-cap: "Estimated marginal mean preference for the risky option by frame across age (95% CI)."
+#| fig-width: 7
+#| fig-height: 4
+emm_plot(m_risky, "frame_risky", "Estimated rating (6 = surely risky)")
+```
+ 
+```{r}
+#| label: fig-jn-risky
+#| fig-cap: "Johnson-Neyman plot: the framing effect (positive minus negative) across age, risky-choice framing."
+#| fig-width: 7
+#| fig-height: 4
+m_risky_jn <- lm(resp_risky ~ gender + ethnicity + politics + education + pos * age,
+                 data = framing |> mutate(pos = as.numeric(frame_risky == "Positive")))
+jn_risky <- johnson_neyman(m_risky_jn, pred = pos, modx = age, control.fdr = TRUE)
+jn_risky
+```
+ 
+**Summary.** Risky choice is the only scenario with a statistically discernible frame × age interaction ($\hat\beta_3$ = `r round(k_risky$int_b, 4)`, `r fp(k_risky$int_p)`), although its effect size is very small.
+ 
+- **Direction:** The change is driven entirely by the negative frame. When the options were described in terms of deaths, preference for the risky program rose with age (`r round(10 * k_risky$neg_b, 3)` points per decade, `r fp(k_risky$neg_p)`). When they were described in terms of lives saved, age had no relationship with preference (`r round(10 * k_risky$pos_b, 3)` per decade, `r fp(k_risky$pos_p)`).
+- **Onset:** The framing effect is not discernible among the youngest participants. It becomes statistically discernible at about age `r round(max(jn_risky$bounds), 1)` and grows from there (@fig-jn-risky).
+ 
+### Robustness checks
+ 
+The residual analyses raised two concerns: unequal residual variance between the frames, and right skew in the goal model. We check whether either one changes the conclusions about the interaction.
+ 
+```{r}
+#| label: tbl-robust
+#| tbl-cap: "Frame × age interaction (difference in age slopes, Positive − Negative) with heteroscedasticity-robust (HC3) standard errors."
+robust_int <- function(mod, frame) {
+  emtrends(mod, specs = frame, var = "age", vcov. = vcovHC(mod, type = "HC3")) |>
+    pairs(reverse = TRUE) |>
+    as.data.frame()
+}
+bind_rows(Attribute      = robust_int(m_att,   "frame_attribute"),
+          Goal           = robust_int(m_goal,  "frame_goal"),
+          `Risky choice` = robust_int(m_risky, "frame_risky"),
+          .id = "Scenario") |>
+  select(Scenario, estimate, SE, t.ratio, p.value) |>
+  kable(digits = 4)
+```
+ 
+```{r}
+#| label: robust-log-goal
+m_goal_log <- lm(log(resp_goal) ~ gender + ethnicity + politics + education +
+                   frame_goal * age,
+                 data = framing)
+r <- resid_plots(m_goal_log); r$qq
+tidy(m_goal_log) |> filter(str_detect(term, "frame_goal|^age")) |> kable(digits = 4)
+```
+ 
+- **Robust standard errors:** Using heteroscedasticity-robust (HC3) standard errors leaves every conclusion unchanged (@tbl-robust). The attribute and goal interactions remain not discernible, and the risky-choice interaction remains discernible.
+- **Log-transformed goal model:** Log-transforming the goal response removes most of the skew. The interaction then sits right at the $\alpha$ = 0.05 boundary, with the same direction and pattern: older adults are more likely to stop under the negative frame only. The goal-framing result is borderline, but the qualitative pattern does not depend on how we model it.
+ 
 
 
 # Discussion
