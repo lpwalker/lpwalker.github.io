@@ -754,4 +754,18 @@ jn_risky
 
 # Discussion
 
+## Discussion
+
+Across all three scenarios, the framing effect shows that the gap between the positive and negative frames widens with age. The widening comes almost entirely from the **negative** frame. In every scenario, the positive-frame age slope was essentially zero. Under the negative frame, older adults rated the drug as less effective, were more likely to say they would stop drinking cocoa, and preferred the risky program more. The strength of the evidence differs by scenario. The frame × age interaction was statistically discernible only for risky-choice framing. For attribute and goal framing, it was in the predicted direction but not discernible at $\alpha = 0.05$. All three interactions had very small effect sizes. On the question of onset, the framing effect in the attribute scenario was present at every age from 18 to 71, so it has no onset age. For goal and risky-choice framing, the Johnson-Neyman analysis showed that the framing effect was not discernible among the youngest adults and became discernible around 26 or 27, persisting through to 71 (the oldest age). 
+
+These findings matter because older adults increasingly make high-stakes health and financial decisions, and much of the information they receive is framed in terms of losses. Our results suggest that loss-framed messages, rather than gain-framed ones, are the ones whose influence grows with age. Communicators such as clinicians, pharmaceutical advertisers, and advertising campaigns could therefore shift older adults' judgments more by choosing negative wording, even when the information and outcome is the same. 
+
+Our conclusions are more cautious than Xu (2024), and the differences come from several changes to the analysis:
+
+- **Data cleaning:** The paper reported excluding participants who failed the attention check or gave mismatched ages, yet its N = 696 equals every completed survey in the data. We applied those exclusions, removing 8 participants, and treated "Prefer not to say" as missing rather than as a demographic group.
+- **Model conditions:** The paper reported no checks of model conditions. We assessed residuals, influence, and multicollinearity for each model and found non-Gaussian, unequal-variance errors caused by the bounded 1–6 scale, which we addressed with a Box-Cox transformation.
+- **Frame-specific slopes:** The paper estimated these by fitting separate regressions to each frame's subset without the demographic controls. We estimated them with `emtrends()` from the full adjusted model.
+- **Interpreting the interaction:** The paper treated interactions with p = .087 and .111 as evidence that age moderates framing in every scenario. Our results support that claim only for risky-choice framing.
+
+This study has several limitations. The participants were an MTurk convenience sample and were mostly White, college-educated, and Democrat, so the results may not generalize to all U.S. adults. The age distribution of the participants skewed younger, with less being closer to 71 and more being closer to the 20s. Few participants were over 60, and none were over 71.
 
