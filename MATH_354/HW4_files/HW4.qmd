@@ -1,0 +1,181 @@
+---
+title: Homework 4 -- Regression Consult # Title of the document
+
+# Bibliography Details
+bibliography: HW4References.bib  # Name of bib file in the same folder 
+bibliographystyle: apa            # Bibliography style
+
+execute:               # Default settings for code blocks
+  warning: false       # Do not print warnings
+  message: false       # Do not print messages
+  size: "scriptsize"   # Set code size to script size
+
+# Below will do html by default. To render the entire project
+# Use the following code:
+# quarto::quarto_render("HW4.qmd")
+format:
+  pdf:        # Specify .pdf formatting options 
+    documentclass: article     # Document Class
+    number-sections: true      # Number Sections
+    reference-section-title: "References" # Title for reference section
+    code-line-numbers: true    # Line numbers printed in code
+    cap-location: top          # Captions at the top of tables 
+    geometry:
+      - top=0.75in
+      - left=0.75in
+      - bottom=0.75in
+      - right=0.75in
+  html:       # Specify HTML formatting options 
+    number-sections: true      # Number Sections
+    code-fold: true            # Button to show code
+    code-line-numbers: true    # Line numbers printed in code
+    cap-location: top          # Captions at the top of tables and figures
+format-links: [pdf]
+---
+```{r}
+#| echo: false
+
+default_chunk_hook  <- knitr::knit_hooks$get("chunk")
+
+latex_font_size <- c("Huge", "huge", "LARGE", "Large", 
+                     "large", "normalsize", "small", 
+                     "footnotesize", "scriptsize", "tiny")
+
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- default_chunk_hook(x, options)
+  if(options$size %in% latex_font_size) {
+    paste0("\n \\", options$size, "\n\n", 
+      x, 
+      "\n\n \\normalsize"
+    )
+  } else {
+    x
+  }
+})
+```
+
+```{r}
+#| label: load-packages
+#| include: false
+library(tidyverse)
+library(patchwork)
+```
+
+When people make decisions, their choices are often swayed by how information is presented. This is often described as "the framing effect." One example of this, is how commercials describe new medications. As an example, Nereus (tradipitant), a new drug for motion-induced vomiting like sea-sickness, is marketed with a **positive frame** as reducing vomiting incidence from 44% to 18% (a reduction of 60%). This marketing makes it seem more effective than a **negative frame** that says just 18% of patients still experienced vomiting, even though both statements are true. 
+
+@Xu24 aimed to evaluate whether older adults are more or less vulnerable to framing than younger adults. They collected a sample of 696 adults aged 18 to 71 and exposed them to three different scenarios
+
+**Scenario 1:** Rate Drug Efficacy (1 = very bad, 6 = very good)
+
+* **Positive Frame:** 70 out of 100 patients felt better
+* **Negative Frame:** 30 out of 100 patients did not feel better
+
+**Scenario 2:** Likelihood to stop drinking cocoa (1 = surely stop, 6 = surely continue)
+
+* **Positive Frame:** Stopping drinking hot cocoa reduces cadmium and cancer risk.
+* **Negative Frame:** Continuing to drink hot cocoa increases cadmium and cancer risk.
+
+**Scenario 3:** Preference for chance choice (1 = surely safe option, 6 = surely risky)
+
+* **Positive Frame:** Choice between 200 saved vs 1/3 chance all 600 are saved.
+* **Negative Frame:** Choice between 400 die vs 2/3 chance all 600 die.
+
+
+In each scenario, participants were randomly assigned a positive or negative frame. They rated their response on a 1-6 scale. The researchers want to build three models, one for each scenario adjusting for simultaneous linear changes in demographic variables (gender, ethnicity, education level, political affiliation).
+ 
+They want to evaluate whether, as adults age, the way choices are worded have more influence on their judgments and ultimate choices. If there is a change, are those changes driven by positive or negative framings? At what age does this effect onset? 
+
+**Your Goals:**
+
+* Determine the correct analysis strategy and conduct the necessary analyses. 
+    * Hint 1: Ensure to assess and communicate results about the model fit. 
+    * Hint 2: Ensure to think about whether or which interactions need to be included.
+    * Hint 3: You will need run various post hoc procedures (e.g., `emmeans`, `emtrends` or `johnson_neyman`).
+    * Hint 4: Looking at the paper may be helpful. They do include `R` code, but I expect you to do a much better job using the techniques we discussed (they do somethings differently)
+* Write a clear, concise, complete, and correct report conveying an answer to their research question.
+
+The data are in `HW4Data.csv` but they will require some manual and `tidyverse` cleaning.
+
+# Loading and Cleaning the Data
+
+```{r}
+# Load Data
+dat <- read_csv("HW4data.csv",
+                col_names = F,
+                col_types = cols(.default = col_character()))
+
+# Clean Data
+dat <- dat |>
+  slice(1:698) |>      # rows 699–844 are empty rows
+  select(X1:X32)       # X33–X52 are empty columns
+
+names(dat) <- str_trim(as.character(dat[2, ]))  # row 2 becomes the column names
+
+dat <- dat |>
+  slice(-(1:2)) |>    # remove the question-text row and the names row
+  rename(duration = duratin) |>
+  type_convert(col_types = cols()) |>
+  select(-c(confirmation, Q_RecaptchaScore, userLanguage, distributionChannel, startDate, endDate))
+
+# Clean age attention check
+dat <- dat |>
+  mutate(band   = stri_trans_nfkc(ageattentioncheck),   # unbolding
+         age_ok = is.na(band) |                         # early respondents weren't asked
+                  between(age, parse_number(band), parse_number(str_remove(band, ".*-"))))
+
+dat |> filter(!age_ok) |> select(age, band)             # shows the mismatches
+
+dat <- dat |>
+  filter(age_ok, is.na(attentioncheck) | attentioncheck == 1) |>
+  select(-c(ageattentioncheck, attentioncheck, band, age_ok))
+
+# Remove "prefer not to say" answers / fix wordings
+framing <- dat |>
+  mutate(across(c(gender, ethnicity, politics, education), ~ na_if(.x, "Prefer not to say"))) |>
+  drop_na(gender, ethnicity, politics, education) |>
+  transmute(
+    id = responseID,
+    age,
+    gender    = fct_infreq(gender),       # most common level is reference
+    ethnicity = fct_infreq(ethnicity),
+    politics  = fct_infreq(politics),
+    education = factor(education,
+                       levels = c("Less than high school", "High school graduate",
+                                  "Some college", "2 year degree", "4 year degree",
+                                  "Professional degree", "Doctorate")) |>
+                fct_relevel("4 year degree"),   # largest group is reference
+    frame_attribute   = factor(if_else(treatment1 == "pos1", "Positive", "Negative"),
+                          levels = c("Negative", "Positive")),
+    frame_goal  = factor(if_else(treatment2 == "pos2", "Positive", "Negative"),
+                          levels = c("Negative", "Positive")),
+    frame_risky = factor(if_else(treatment3 == "pos3", "Positive", "Negative"),
+                          levels = c("Negative", "Positive")),
+    resp_attribute   = pick1,
+    resp_goal  = pick2,
+    resp_risky = pick3
+  )
+
+# for plotting later
+framing_long <- framing |>
+  pivot_longer(c(starts_with("frame_"), starts_with("resp_")),
+               names_to = c(".value", "scenario"), names_sep = "_") |>
+  mutate(scenario = factor(scenario,
+                           levels = c("attribute", "goal", "risky"),
+                           labels = c("Attribute (drug efficacy)",
+                                      "Goal (stop cocoa)",
+                                      "Risky choice (disease)")))
+```
+
+# Exploratory Data Analyses
+
+# Regression Analyses
+
+## Rating Drug Efficacy
+
+## Likelihood to Stop Drinking Cocoa
+
+## Preference for Chance Choice
+
+
+# Discussion
+
