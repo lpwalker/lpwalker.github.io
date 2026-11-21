@@ -1,0 +1,768 @@
+---
+title: Homework 5 -- Regression # Title of the document
+
+# Bibliography Details
+bibliography: HW5References.bib  # Name of bib file in the same folder 
+bibliographystyle: apa            # Bibliography style
+
+execute:               # Default settings for code blocks
+  warning: false       # Do not print warnings
+  message: false       # Do not print messages
+  size: "scriptsize"   # Set code size to script size
+
+# Below will do html by default. To render the entire project
+# Use the following code:
+# quarto::quarto_render("HW5.qmd")
+format:
+  pdf:        # Specify .pdf formatting options 
+    header-includes: \usepackage{xcolor}
+    documentclass: article     # Document Class
+    number-sections: true      # Number Sections
+    reference-section-title: "References" # Title for reference section
+    code-line-numbers: true    # Line numbers printed in code
+    cap-location: top          # Captions at the top of tables 
+    geometry:
+      - top=0.75in
+      - left=0.75in
+      - bottom=0.75in
+      - right=0.75in
+  html:       # Specify HTML formatting options 
+    number-sections: true      # Number Sections
+    code-fold: true            # Button to show code
+    code-line-numbers: true    # Line numbers printed in code
+    cap-location: top          # Captions at the top of tables and figures
+format-links: [pdf]
+---
+```{r}
+#| echo: false
+
+default_chunk_hook  <- knitr::knit_hooks$get("chunk")
+
+latex_font_size <- c("Huge", "huge", "LARGE", "Large", 
+                     "large", "normalsize", "small", 
+                     "footnotesize", "scriptsize", "tiny")
+
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- default_chunk_hook(x, options)
+  if(options$size %in% latex_font_size) {
+    paste0("\n \\", options$size, "\n\n", 
+      x, 
+      "\n\n \\normalsize"
+    )
+  } else {
+    x
+  }
+})
+```
+
+```{r}
+#| label: load-packages
+#| include: false
+library(tidyverse)
+library(patchwork)
+```
+
+# Question 1 (From the scrapped Quiz 4)
+
+In Homework 4, we evaluated whether and how positive and negative framings impact adult perception of three unique situations using data from @Xu24.
+
+Gemini AI Solution below. I had to 
+
+1. Adjust the data cleaning which did not work.
+2. Adjust the Johnson Neyman analysis that did not work.
+
+Read the following subsections where gemini does the analysis. Use \textcolor{red}{red} to make notes about what you do not like and \textcolor{blue}{blue} for notes about what you do like. Of course, anything that is missing should be reported in \textcolor{red}{red}.
+
+## Overview & Analytical Strategy
+
+To evaluate whether framing effects strengthen as adults age—and to identify whether age-related divergence is driven by positive or negative wording—we fit three multiple linear regression models (one per scenario):
+
+$$Y_i = \beta_0 + \beta_1 \text{Age}_i + \beta_2 \text{Frame}_i + \beta_3 (\text{Age}_i \times \text{Frame}_i) + \mathbf{X}_i\boldsymbol{\gamma} + \epsilon_i$$
+\textcolor{red}{I think this might be better as a mixed effects model, because there are three linear models but each models measurements are on the same subjects.}
+
+where $\mathbf{X}_i$ adjusts for simultaneous linear differences across **gender**, **ethnicity**, **education level**, and **political affiliation**.
+
+\textcolor{blue}{I like that $\mathbf{X}_i$ makes the regression much easier to write} \textcolor{red}{but I feel that it is missing a proper explanation of how it is structured.}
+
+- **Interaction ($\beta_3$):** Tests whether the gap between Positive and Negative framing widens with age.
+\textcolor{blue}{I like that the interaction term is explaned as the framing effect changing with age}\textcolor{red}{but I think that it is ignoring the possible age effect changing with framing.}
+
+- **Simple Slopes:** Evaluates the age slope separately within the Positive frame and the Negative frame to determine which framing drives the change.
+
+\begingroup\color{red}
+I don't like the explanation of the slopes for age and frame. It should've specified specifically that $\beta_1$ was the effect on perception for a one unit increase in age and that $\beta_2$ was the effect on perception for a change from negative framing to positive framing. Additionally, it doesn't specify whether they are using Positive or Negative framing as the baseline.
+\endgroup
+
+- **Johnson-Neyman (J-N) Analysis:** Identifies the exact age threshold ("onset") at which the conditional difference between Positive and Negative frames becomes statistically significant ($p < .05$).
+
+\textcolor{red}{The Johnson-Neyman Analysis won't identify the exact age, because }
+
+---
+
+## Data Import and Cleaning
+
+Note that `HW4Data.csv` contains Qualtrics metadata in Row 1 (short variable names) followed by participant responses, as well as trailing empty rows (`N = 696` valid respondents out of `842` non-header rows).
+
+```{r}
+#| size: "scriptsize"
+#| label: setup-and-clean
+library(tidyverse)
+library(broom)
+library(emmeans)
+library(interactions)
+library(knitr)
+
+# Read raw file
+raw_df <- read_csv("HW4Data.csv", show_col_types = FALSE)
+
+# Prof had to remove empty columns to fix an issue with filter() later
+# currently column names are in the first row. Remove empty columns.
+raw_df_sub <- raw_df[, c(!is.na(raw_df[1,]))] 
+
+# Extract clean variable names and assign to data frame
+clean_names <- as.character(unlist(raw_df_sub[1, ])) |> str_trim()
+
+df <- raw_df_sub[-1, ]
+names(df) <- make.unique(clean_names)
+
+df_clean <- df |>
+  filter(!is.na(responseID), responseID != "") |>
+  mutate(
+    age = as.numeric(age),
+    pick1 = as.numeric(pick1),
+    pick2 = as.numeric(pick2),
+    pick3 = as.numeric(pick3),
+    # Standardize frame labels with Negative as reference level
+    frame1 = factor(if_else(str_starts(treatment1, "pos"), "Positive", "Negative"),
+                    levels = c("Negative", "Positive")),
+    frame2 = factor(if_else(str_starts(treatment2, "pos"), "Positive", "Negative"),
+                    levels = c("Negative", "Positive")),
+    frame3 = factor(if_else(str_starts(treatment3, "pos"), "Positive", "Negative"),
+                    levels = c("Negative", "Positive")),
+    gender = factor(gender),
+    ethnicity = factor(ethnicity),
+    education = factor(education),
+    politics = factor(politics)
+  )
+
+cat("Total valid respondents:", nrow(df_clean), "\n")
+cat("Age range:", min(df_clean$age, na.rm = TRUE), "to", max(df_clean$age, na.rm = TRUE), "\n")
+```
+\begingroup\color{blue}
+I like that the top of each code chunk is commented so a reader can understand the cleaning process better. I also like that the frames, gender, ethnicity, education, and politics are put into factors, and that Negative is specified as the reference. Lastly, I like that it decided to print the total valid respondents (the sample size), even though it just checked the responseID, as well as the age range, because that effects how we interpret the regression.
+\endgroup
+
+\begingroup\color{red}
+The code did not remove people who didn't pass the age and attention checks, duplicates, or people that didn't finish or had other issues with the response. It also doesn't explain its reasoning for dealing with missing data, or its goals in the data cleaning process, or why it needed to convert variables to numeric or factor.
+\endgroup
+
+
+## Covariate-Adjusted Regression Models
+```{r}
+#| size: "scriptsize"
+#| label: fit-models
+# Model 1: Drug Efficacy (1 = very bad, 6 = very good)
+m1 <- lm(pick1 ~ age * frame1 + gender + ethnicity + education + politics, data = df_clean)
+
+# Model 2: Hot Cocoa & Cadmium Risk (1 = surely stop, 6 = surely continue)
+m2 <- lm(pick2 ~ age * frame2 + gender + ethnicity + education + politics, data = df_clean)
+
+# Model 3: Disease Outbreak / Chance Choice (1 = surely safe, 6 = surely risky)
+m3 <- lm(pick3 ~ age * frame3 + gender + ethnicity + education + politics, data = df_clean)
+
+# Helper function to display focal interaction terms
+extract_focal <- function(model, scenario_label) {
+  tidy(model, conf.int = TRUE) |>
+    filter(str_detect(term, "^(Intercept|age|frame)")) |>
+    mutate(Scenario = scenario_label) |>
+    select(Scenario, term, estimate, std.error, statistic, p.value, conf.low, conf.high)
+}
+
+bind_rows(
+  extract_focal(m1, "Scenario 1: Drug Efficacy"),
+  extract_focal(m2, "Scenario 2: Hot Cocoa"),
+  extract_focal(m3, "Scenario 3: Chance Choice")
+) |>
+  kable(digits = 4, caption = "Focal Regression Estimates (Adjusting for Demographics)")
+```
+
+\begingroup\color{red}
+Gemini did not check any of the regression conditions, it only cleaned the data and created three linear regression models. It is missing pairwise plots to check for linearity and/or collinearity, missing a residual analysis to make sure they are approximately Gaussian distributed around 0 with an equal variance, missing an outlier analysis to identify any high leverage points that are highly influential as well and could skew the regression line, and missing checking the VIF for multicollinearity. Additionally, in the table, it seems like the coefficients were only reported for the effects of age, framing, and the interaction term, which I realize are the ones of interest for the experiment, but I think it would've been useful to report the coefficients for all the terms.
+\endgroup
+
+\begingroup\color{blue}
+I like the way the code is structured for each linear regression model. There are clear comments and I can tell exactly what is happening in the code chunk. I like that Gemini reported the coefficients in a table along with the p-value and confidence intervals. 
+\endgroup
+
+
+## Simple Slopes: Positive vs. Negative Framing Drivers
+
+To test whether age-related shifts are driven by reactions to the positive or negative frame, we estimate the linear age trend ($\partial Y / \partial \text{Age}$) separately within each framing condition.
+
+```{r}
+#| size: "scriptsize"
+#| label: simple-slopes
+
+slopes_s1 <- emtrends(m1, ~ frame1, var = "age") |> summary(infer = TRUE) |> mutate(Scenario = "Scenario 1: Drug Efficacy") |> rename(Frame = frame1)
+slopes_s2 <- emtrends(m2, ~ frame2, var = "age") |> summary(infer = TRUE) |> mutate(Scenario = "Scenario 2: Hot Cocoa") |> rename(Frame = frame2)
+slopes_s3 <- emtrends(m3, ~ frame3, var = "age") |> summary(infer = TRUE) |> mutate(Scenario = "Scenario 3: Chance Choice") |> rename(Frame = frame3)
+
+bind_rows(slopes_s1, slopes_s2, slopes_s3) |>
+  select(Scenario, Frame, age.trend, SE, df, lower.CL, upper.CL, t.ratio, p.value) |>
+  kable(digits = 4, caption = "Age Slopes Within Positive and Negative Frames")
+```
+
+\begingroup\color{blue}
+I like that Gemini reported the coefficients for the age slopes in a table format, similar to the format of reporting the coefficients above. I think this was a useful analysis to conduct to see if the age effect came more from positive of negative framing.
+\endgroup
+
+\begingroup\color{red}
+Unlike the other code chunk, there are no comments, although there is a description above for the process being done. I would appreciate better commentary on the code to make it more readable. 
+\endgroup
+
+## Johnson-Neyman Analysis: Age of Onset
+
+Using the Johnson-Neyman technique (interactions::johnson_neyman), we identify the exact age at which the conditional difference between Positive and Negative frames crosses the $\alpha = .05$ significance threshold.
+
+\textcolor{red}{The phrasing of exact age doesn't account for the uncertainty in the exact point where the conditional differece in framing becomes statistically discernible.}
+
+```{r}
+#| size: "scriptsize"
+#| label: johnson-neyman
+#| fig-width: 8
+#| fig-height: 4
+
+# Prof had to correct argument order so pred is age (continuous), and modx is the frame (binary)
+# This is technically not "right" but it does "work" for binary predictors as long as it is fit
+# as a numerical predictor.
+df_clean_jn <- df_clean |> mutate(frame1=as.numeric(frame1)-1, # Negative = 1-1, # Positive = 2-1
+                                  frame2=as.numeric(frame2)-1,
+                                  frame3=as.numeric(frame3)-1)
+# Model 1: Drug Efficacy (1 = very bad, 6 = very good)
+m1_jn <- lm(pick1 ~ age * frame1 + gender + ethnicity + education + politics, data = df_clean_jn)
+# Model 2: Hot Cocoa & Cadmium Risk (1 = surely stop, 6 = surely continue)
+m2_jn <- lm(pick2 ~ age * frame2 + gender + ethnicity + education + politics, data = df_clean_jn)
+# Model 3: Disease Outbreak / Chance Choice (1 = surely safe, 6 = surely risky)
+m3_jn <- lm(pick3 ~ age * frame3 + gender + ethnicity + education + politics, data = df_clean_jn)
+
+jn1 <- johnson_neyman(m1_jn, pred = "age", modx = "frame1", alpha = 0.05)
+jn2 <- johnson_neyman(m2_jn, pred = "age", modx = "frame2", alpha = 0.05)
+jn3 <- johnson_neyman(m3_jn, pred = "age", modx = "frame3", alpha = 0.05)
+
+print(jn1)
+print(jn2)
+print(jn3)
+
+jn1$plot + labs(title = "Scenario 1: Drug Efficacy (Framing Effect Across Age)", x = "Age (Years)")
+jn2$plot + labs(title = "Scenario 2: Hot Cocoa (Framing Effect Across Age)", x = "Age (Years)")
+jn3$plot + labs(title = "Scenario 3: Chance Choice (Framing Effect Across Age)", x = "Age (Years)")
+```
+
+\begingroup\color{blue}
+I like that Gemini decided to use Johnson Neyman analysis, because finding out if the framing effect is more prominent in older or younger people is an important question to ask. The process of doing these plots are very similar to how we did it in class. 
+\endgroup
+
+\begingroup\color{red}
+I think this Johnson Neyman analysis is testing the wrong thing. It is testing where in the framing (positive or negative) the age effect becomes statistically discernible, but the research question is aiming to test where in the age range the framing effect becomes statistically discernible. The result of these analyses should be an age with confidence intervals, rather than uninterpretable numbers from binary data (positive or negative). I think it may have realized this and changed the x-axis label to age for the last three plots? 
+\endgroup
+
+## Visualization of Predicted Trajectories
+
+```{r}
+#| size: "scriptsize"
+#| label: trajectory-plots
+#| fig-width: 10
+#| fig-height: 4
+
+# Generate adjusted marginal predictions across age (18 to 71), increasing rg.limit past 105,840
+age_grid <- seq(18, 71, by = 1)
+
+p1 <- emmip(m1, frame1 ~ age, at = list(age = age_grid), rg.limit = 150000, CIs = TRUE, plotit = FALSE) |>
+  mutate(Scenario = "1. Drug Efficacy\n(1 = Very Bad, 6 = Very Good)") |> rename(Frame = frame1)
+p2 <- emmip(m2, frame2 ~ age, at = list(age = age_grid), rg.limit = 150000, CIs = TRUE, plotit = FALSE) |>
+  mutate(Scenario = "2. Hot Cocoa Continuation\n(1 = Surely Stop, 6 = Surely Continue)") |> rename(Frame = frame2)
+p3 <- emmip(m3, frame3 ~ age, at = list(age = age_grid), rg.limit = 150000, CIs = TRUE, plotit = FALSE) |>
+  mutate(Scenario = "3. Chance Choice\n(1 = Surely Safe, 6 = Surely Risky)") |> rename(Frame = frame3)
+
+bind_rows(p1, p2, p3) |>
+  ggplot(aes(x = age, y = yvar, color = Frame, fill = Frame)) +
+  geom_ribbon(aes(ymin = LCL, ymax = UCL), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1.1) +
+  facet_wrap(~ Scenario, scales = "free_y") +
+  scale_color_manual(values = c("Negative" = "#D55E00", "Positive" = "#0072B2")) +
+  scale_fill_manual(values = c("Negative" = "#D55E00", "Positive" = "#0072B2")) +
+  labs(
+    x = "Age (Years)",
+    y = "Adjusted Mean Rating (1–6 Scale)",
+    title = "Framing Effects Across the Adult Lifespan",
+    subtitle = "Adjusted for gender, ethnicity, education level, and political affiliation (95% CIs)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+\begingroup\color{blue}
+I think these plots are very valuable to the analysis. They visualize the regression lines for both positive and negative framing against the age range. We can see clear changes in the effect of age on the framing responses, and this answers the research question well. I also like that the subtitle includes all of the variables that the model included to adjust for simultaneous linear changes.
+\endgroup
+
+\begingroup\color{red}
+I don't think this is a fatal error, but it would be easier to compare each scenario if the y-axis values were the same range. 
+\endgroup
+
+## Summary of Empirical Findings from `HW4Data.csv`
+
+When rendered on `HW4Data.csv`, the code produces the following results across the three scenarios:
+
+| Scenario | $\text{Age} \times \text{Frame}$ Interaction ($\beta_3$) | Age Slope: Negative Frame | Age Slope: Positive Frame | Age of Onset (J-N Threshold, $p < .05$) |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Drug Efficacy** ($n = 696$) | $b = +0.0078, p = 0.087$ | $b = -0.0055, p = 0.071$ | $b = +0.0023, p = 0.508$ | **All adult ages ($\ge 18$)** (J-N lower bound $= 2.2$ yrs) |
+| **2. Hot Cocoa** ($n = 696$) | $b = +0.0126, p = 0.111$ | **$b = -0.0128, p = 0.022$** | $b = -0.0003, p = 0.962$ | **Age 25.9 years** (significant for ages $\ge 25.9$) |
+| **3. Chance Choice** ($n = 695$) | **$b = -0.0194, p = 0.032$** | **$b = +0.0170, p = 0.007$** | $b = -0.0025, p = 0.708$ | **Age 26.9 years** (significant for ages $\ge 26.9$) |
+
+- **Does framing influence grow with age?** Yes—the framing gap widens with age in all three scenarios, reaching statistical significance in **Scenario 3 (Chance Choice)** ($p = 0.032$) and showing a marginal trend in the same direction in **Scenario 1** ($p = 0.087$) and **Scenario 2** ($p = 0.111$).
+- **Positive vs. Negative driver:** Across every scenario, **changes are driven entirely by the negative framing**. Ratings in the positive frame remain flat across age ($p > 0.50$ in all three models), whereas older adults respond significantly more strongly to negative framings (becoming more likely to stop drinking cocoa when warned of increased cancer risk, $p = 0.022$, and more risk-seeking when outcomes are framed as lives lost, $p = 0.007$).
+- **Age of onset:** In **Scenario 1**, the framing effect is already significant at the youngest observed age ($18$). In **Scenarios 2 and 3**, younger adults (ages $18\text{–}25$) show no statistically significant framing bias, with the framing effect emerging at **age 25.9** (Scenario 2) and **age 26.9** (Scenario 3).
+
+\begingroup{blue}
+I like that the table presents the results that directly answer the research question, and the results discussion addresses the different things being tested, including if framing effect changes with age, whether positive or negative framing had a larger effect, and at around which age the framing effect becomes statistically discernible.  
+\endgroup
+
+\begingroup{red}
+The effect size for the results is missing, which could say a lot about the practical importance of these regression models. Some of the results are overstated through Gemini. It seems like it is trying to say that all three scenarios have discernibly different framing effects with age, but only one of the p-values is significant. Moreover, only two scenarios show that older participants respond more strongly to negative framing, so I wouldn't say changes are entirely driven by negative framing. Lastly, I'm unsure where Gemini got the age onsets for each scenario, because the Johnson Neyman analysis was testing for the wrong thing.  
+\endgroup
+
+# Question 2 (Quiz 3)
+
+The root biomass of a plant is the total mass of all of its roots. These roots help provide nutrients to the plant and also play a role in soil development. Interestingly, for most species of plants, the root biomass is approximately the same as the above-ground weight.
+	
+Root biomass is highly relevant to research into plant responses to climate change. For example, changes in temperature, precipitation, CO2 levels, and soil properties can lead to changes in root biomass, which affects the roots that provide support for the plants above, help prevent erosion, and provide habitats for various plants and animals. Unfortunately, to observe the root biomass directly, researchers would need to sacrifice and excavate the entire plant, including the whole root system. Because of this, finding ways to estimate or predict root biomass is important. 
+	
+@Lai13 explored using different models to assess the association between the diameter of a plant at breast height (cm) and the root biomass (kg).
+
+**Research Question:** Can we predict root biomass using the tree diameters at breast height for *Castanopsis eyrei*, *Pinus massoniana*, and *Schima superba* trees? Ensure to identify whether there are unique relationships by species.
+
+```{r}
+#| size: "scriptsize"
+dat.trees <- read_csv("LaiTreeData.csv")|>
+  mutate(sp = factor(sp))
+```
+```{r}
+#| label: load-packages-and-code
+#| message: false
+#| warning: false
+library(tidyverse)
+library(GGally)      # ggpairs()
+library(broom)       # augment(), tidy()
+library(car)         # vif()
+library(effectsize)  # F_to_omega2(), omega_squared(), interpret_omega_squared(), standardize_parameters()
+library(emmeans)     # emtrends(), emmip(), pairs()
+library(knitr)       # kable()
+
+source("plotResiduals.R")  # plotResiduals()
+source("plotInfluence.R")  # plotInfluence()
+```
+
+## Check Conditions
+
+Pairwise plots to check for linearity between predictors and response variable as well as collinearity between predictors. 
+```{r}
+ggpairs(dat.trees, columns = c("rootbiomass", "dbh", "sp"))
+```
+DBH and root biomass are strongly correlated (r = 0.896). However, the relationship curves upward, and both variables are right-skewed. The species have similar DBH distributions, so we do not expect species and DBH to be collinear. This indicates we might need to use a log transformation.
+
+
+We will fit the model to analyse residual and influence plots for normality of residuals and influential outliers. For the species, we will use *Castanopsis eyrei* as the base reference, and the response variable $Y_i$ is root biomass.
+$$
+Y_i = \beta_0 + \beta_1 \text{dbh}_i + \beta_2 (\text{sp}_i = \text{"Pinus"}) + \beta_3 (\text{sp}_i = \text{"Schima"}) + \beta_4 \text{dbh}_i(\text{sp}_i = \text{"Pinus"}) + \beta_5 \text{dbh}_i(\text{sp}_i = \text{"Schima"}) + \epsilon_i
+$$
+
+```{r}
+mod.trees <- lm(rootbiomass ~ dbh*sp,
+                data = dat.trees)
+```
+
+Next, we will analyse residual plots and influence plots.
+```{r}
+plotResiduals(mod.trees)
+```
+The residual plot shows that the residuals do not seem to follow a Gaussian distribution, and the variance is not equal for all fitted values of root biomass. 
+
+```{r}
+plotInfluence(mod.trees)
+```
+The influence plots show a few highly influential points that may be outliers. The pairwise, residual, and influence plots indicate that we should use a log transofrmation on the data instead. 
+
+## Check conditions after log transform
+
+```{r}
+ggpairs(dat.trees, columns = c("logrootbiomass", "logdbh", "sp"))
+```
+On the log scale, the relationship between dbh and root biomass is linear (r = 0.972), and there is no collinearity.
+
+The new linear regression model is on the log scale, where logdbh and species are predictors for logrootbiomass.
+$$
+\log(Y_i) = \beta_0 + \beta_1 \log(\text{DBH}_i) + \beta_2 (\text{sp}_i = \text{"Pinus"}) + \beta_3 (\text{sp}_i = \text{"Schima"}) + \beta_4 \log(\text{DBH}_i)(\text{sp}_i = \text{"Pinus"}) + \beta_5 \log(\text{DBH}_i)(\text{sp}_i = \text{"Schima"}) + \epsilon_i
+$$
+```{r}
+mod.trees.log <- lm(logrootbiomass ~ logdbh*sp,
+                    data = dat.trees)
+```
+
+```{r}
+plotResiduals(mod.trees.log)
+```
+The residual plot shows that the residuals follow an approximately Gaussian distribution around 0, with approximately equal variance across the fitted logrootbiomass values, which now meets the residual conditions for linear regression.
+
+```{r}
+plotInfluence(mod.trees.log)
+```
+There are a few high leverage and very few influential points, so this approximately meets the conditions for OLS. 
+
+## Overall F-test Results
+
+```{r}
+anova(mod.trees.log)
+```
+The F-test shows that the logdbh, sp, and interaction terms all statistically discernibly predict the logrootbiomass. logdbh especially predicts this as its F-value is very large.
+
+## Effect Size
+
+```{r}
+sum.trees <- summary(mod.trees.log)
+om.trees <- F_to_omega2(f = sum.trees$fstatistic[1],         # F statistic
+                        df = sum.trees$fstatistic[2],       
+                        df_error = sum.trees$fstatistic[3])  
+om.trees
+interpret_omega_squared(om.trees$Omega2_partial, "cohen1992")
+```
+The overall effect size is large. The model accounts for a large portion of the variation in log root biomass ($R^2 \approx 0.97$).
+
+```{r}
+om.terms <- omega_squared(anova(mod.trees.log))
+om.terms
+interpret_omega_squared(om.terms$Omega2_partial, "cohen1992")
+```
+
+The effect sizes for log DBH, species, and the interaction are all large. Log DBH explains most of the variation.
+
+## Coefficients
+
+```{r}
+tidy(mod.trees.log) |>
+  mutate(std = standardize_parameters(mod.trees.log)$Std_Coefficient,
+         p.value = if_else(p.value < 0.0001, "<0.0001", as.character(round(p.value, 4)))) |>
+  kable(digits = 3, col.names = c("Term", "Estimate", "SE", "t", "p", "Std-Coef"))
+```
+
+The interaction terms are statistically discernible ($p < 0.05$), so the slope relating log DBH to log root biomass differs by species. The only effect that is not discernibly different from 0 is that from *Schima superba* ($p = 0.321$). 
+
+## Post Hoc Testing
+
+```{r}
+emt.trees <- emtrends(mod.trees.log, ~logdbh*sp, var = "logdbh")
+emt.trees
+```
+The EMT table shows that the estimated slopes of log root biomass on log DBH are about 2.15 for *C. eyrei*, 2.69 for *P. massoniana*, and 2.32 for *S. superba*.
+
+
+```{r}
+emm.trees <- emmeans(mod.trees.log, ~logdbh*sp,
+                     at = list(logdbh = seq(min(dat.trees$logdbh), max(dat.trees$logdbh), length.out = 100)))
+
+ggplot(data = data.frame(emm.trees), aes(x = logdbh, y = emmean)) +
+  geom_ribbon(aes(ymin = lower.CL, ymax = upper.CL, fill = sp), alpha = 0.3) +
+  geom_line(aes(color = sp)) +
+  theme_bw() +
+  xlab("log Diameter at Breast Height (cm)") +
+  ylab("log Root Biomass (kg)") +
+  labs(color = "", fill = "")
+```
+The EMM plot shows that for all three species, wider trees tend to have more root biomass, however, how fast  root biomass increases with an increase in dbh depends on the species. 
+
+## Contrasts
+
+Do the slopes differ between species?
+
+```{r}
+contrasts.trees <- pairs(emt.trees)
+contrasts.trees
+```
+The slopes of *C. eyrei* and *S. superba* are the only pair that is not discernibly different from each other ($p = 0.1129$).
+
+## Summary
+
+Yes, we can predict root biomass from DBH very well. Using the raw data did not satisfy the conditions for lienar regression, but after a log transformation, we were able to account for around 97% of the variation in log root biomass through the effect of log dbh and species, along with their interaction.
+
+The relationship changes by species, but the slopes between *C. eyrei* and *S. superba* are the only pair that is not discernibly different from each other ($p = 0.1129$). Root biomass rises faster than diameter for all three species. A 1% increase in DBH goes with about a 2.15% increase in root biomass for *C. eyrei*, 2.69% for *P. massoniana*, and 2.32% for *S. superba*.
+
+# Question 3
+
+Diclaimer: This is probably scary to skim. I would expect that -- in fact, I think it's a bit scary to skim. Take it step by step. Come ask questions. I promise it isn't as awful as it looks, but you'll see why we didn't do too much power analysis for regression.
+
+In a linear model 
+$$Y = \beta_0 + \beta_1 X_1 + \dots + \beta_{p-1} X_{p-1} + \epsilon$$
+where $\epsilon \sim \mathcal{N}(0, \sigma^2)$ and $p$ is the number of coefficients, we are often interested in evaluating whether $\beta_j = 0.$
+
+That is, we aim to evaluate
+\begin{align*}
+  H_0&: \beta_j = 0\\
+  H_a&: \beta_j \neq 0.
+\end{align*}
+The test statistic for this hypothesis test is
+$$T = \frac{\hat{\beta}_j-0}{\text{SE}(\hat{\beta}_j)},$$
+and, under the null, we expect this to follow a $t(v=n-p)$ distribution. However, when the actual value of $\beta_j$ is not 0, this quantity follows a different distribution:
+$$T = \frac{\hat{\beta}_j-0}{\text{SE}(\hat{\beta}_j)} \sim t(\beta_\Delta, n - \underbrace{p}_{\beta{s}}).$$
+We take the non-centrality parameter 
+$$\beta_\Delta = \frac{\beta_j \, \sigma_{X_j} \sqrt{1 - R_j^2}}{\sigma} \sqrt{n} = \pm f \sqrt{n}$$
+where
+
+* $\beta_j$: the target slope (effect size in raw units)
+* $\sigma$: residual standard deviation of the regression model
+* $\sigma_{X_j}$: standard deviation of predictor $X_j$
+* $R_j^2$: $R^2$ from regressing $X_j$ on all other predictors 
+    * This is $0$ in simple regression. Otherwise, it accounts for variance inflation $\text{VIF}_j = \frac{1}{1 - R_j^2}$
+
+Acknowledging this would be quite a challenge to define *a priori*, we work with the effect size $f = \sqrt{f^2}$, which is square root of Cohen's $f^2$, defined via the variance explained by adding $X_j$ to the model:
+$$f^2 = \frac{R^2_{\text{full}} - R^2_{\text{reduced}}}{1 - R^2_{\text{full}}} = \frac{\beta_j^2 \, \sigma_{X_j}^2 (1 - R_j^2)}{\sigma^2}.$$
+During power analysis we select this value: small ($f^2=0.02$), moderate ($f^2=0.15$), large($f^2=0.35$).
+
+
+Now, based on our selected $f$, we can compute the power for a two-sided test simply using:
+\begin{align*} 
+\textrm{Power}(n) &= P(\textrm{reject } H_0 ~\vert{}~ H_a\textrm{ is true}) \\ 
+                  &= P\left(T \leq t_{\alpha/2,\, n-p} ~\middle\vert{}~ v = n-p,\, \beta_{\Delta} = f\sqrt{n}\right) \\
+                  &\quad + P\left(T \geq t_{1-\alpha/2,\, n-p} ~\middle\vert{}~ v = n-p,\, \beta_{\Delta} = f\sqrt{n}\right).
+\end{align*}
+
+
+```{r}
+#| size: "scriptsize"
+library(pwr)
+
+p <- 3   # Total number of coefficients in the model (p-1 predictors)
+f2.small <- 0.02
+
+res.small <- pwr.f2.test(u = 1,              # Suppose our research was interested in 1 coefficient
+                         f2 = f2.small,      # Cohen's f^2
+                         sig.level = 0.05,   # alpha = 0.05 (two-sided via F = T^2)
+                         power = 0.80)       # Desired power
+
+(n.small <- ceiling(res.small$v + p)) # we add p for prediction "debt" (p betas)
+```
+
+## Part a
+**Plot the power analysis I conducted above. Ensure to highlight Type I error, Type II error region, and Power. Note this should be similar to the one sample $t$-test.**
+
+```{r}
+df.small  <- n.small - p                  # v = n - p
+ncp.small <- sqrt(f2.small)*sqrt(n.small) # beta_Delta = f*sqrt(n)
+t.crit    <- qt(0.975, df = df.small)     # two-sided critical value
+
+ggdat <- tibble(t = seq(-5, 8, length.out = 1000)) |>
+  mutate(null = dt(t, df = df.small),
+         alt  = dt(t, df = df.small, ncp = ncp.small))
+
+ggplot(data = ggdat, aes(x = t)) +
+  # Type II error: 
+  geom_ribbon(data = filter(ggdat, abs(t) <= t.crit),
+              aes(ymin = 0, ymax = alt, fill = "Type II Error"), alpha = 0.6) +
+  # Power: 
+  geom_ribbon(data = filter(ggdat, t >= t.crit),
+              aes(ymin = 0, ymax = alt, fill = "Power"), alpha = 0.6) +
+  geom_ribbon(data = filter(ggdat, t <= -t.crit),
+              aes(ymin = 0, ymax = alt, fill = "Power"), alpha = 0.6) +
+  # Type I error: 
+  geom_ribbon(data = filter(ggdat, t >= t.crit),
+              aes(ymin = 0, ymax = null, fill = "Type I Error"), alpha = 0.6) +
+  geom_ribbon(data = filter(ggdat, t <= -t.crit),
+              aes(ymin = 0, ymax = null, fill = "Type I Error"), alpha = 0.6) +
+  # Distributions
+  geom_line(aes(y = null, color = "Null Distribution")) +
+  geom_line(aes(y = alt, color = "An Alternative Distribution")) +
+  geom_hline(yintercept = 0) +
+  theme_bw() +
+  xlab("t") +
+  ylab("Density") +
+  ggtitle(bquote("Small (" * f^2 * "=0.02); n=" * .(n.small))) +
+  scale_color_manual(values = c("An Alternative Distribution" = "black",
+                                "Null Distribution" = "darkred")) +
+  scale_fill_manual(values = c("Power" = "goldenrod",
+                               "Type I Error" = "firebrick",
+                               "Type II Error" = "grey")) +
+  labs(color = "", fill = "")
+``` 
+
+## Part b
+
+To see the multicollinearity penalty directly, hold every parameter of a multiple regression model constant except the correlation between predictors.
+
+Suppose we aim to model 
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \epsilon$$
+where $\epsilon \sim \mathcal{N}(0, 1)$, $\beta_1 = 0.25$ is the target effect, $\beta_2 = 0.30$, and $X_1, X_2 \sim \mathcal{N}(0, 1)$ with $\text{Cor}(X_1, X_2) = \rho$. In this setting, $R_1^2 = \rho^2$ and $\text{VIF}_1 = \frac{1}{1 - \rho^2}$.
+
+**Write $f^2$ out in terms of $VIF$. What happens to $f^2$ as we alter the $VIF$ through  $\rho$?**
+
+With $\sigma = 1$, $\sigma^2_{X_1} = 1$, and $R^2_1 = \rho^2$,
+
+$$
+f^2 = \frac{\beta_1^2\, \sigma^2_{X_1}(1 - R_1^2)}{\sigma^2} = \beta_1^2(1 - \rho^2) = \frac{\beta_1^2}{\text{VIF}_1} = \frac{0.0625}{\text{VIF}_1}.
+$$
+As $|\rho|$ increases, the VIF increases and $f^2$ decreases. For example, doubling the VIF cuts the effect size in half.
+
+
+**Conduct a power analysis to determine the required sample size $n$ to achieve $80\%$ power for inference on $\beta_1$ for $\text{VIF}$ values of 1.0, 1.5, 2.0, 5.0, and 10. What happens as $\text{VIF}$ increases?**
+
+```{r}
+beta1 <- 0.25
+p <- 3 # beta0, beta1, beta2
+vif.vals <- c(1.0, 1.5, 2.0, 5.0, 10)
+
+tibble(VIF = vif.vals) |>
+  mutate(rho = sqrt(1 - 1/VIF),
+         f2  = beta1^2/VIF,
+         n   = map_dbl(f2, ~ ceiling(pwr.f2.test(u = 1,
+                                                f2 = .x,
+                                                sig.level = 0.05,
+                                                power = 0.80)$v + p))) |>
+  kable(digits = 4)
+```
+As VIF increases, we see that the sample size increases in proportion. As VIF increases 10x, the sample size required to reach 80% power increases by 10x.
+
+## Part c
+Now, suppose we're doing something fun like an interaction model.
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 (X_1 X_2) + \epsilon$$
+where $\epsilon \sim \mathcal{N}(0, \sigma^2).$
+The $T$ statistic for the test still follows a non-central $t$-distribution
+$$T = \frac{\hat{\beta}_3-0}{\text{SE}(\hat{\beta}_3)} \sim t(\beta_\Delta, v=n - \underbrace{p}_{\beta{s}})$$
+where 
+$$\beta_\Delta = \frac{\beta_3 \, \sigma_{X_1 X_2} \sqrt{1 - R_{X_1 X_2}^2}}{\sigma} \sqrt{n} = \pm f \sqrt{n}$$
+where $\sigma^2_{X_1 X_2} = \text{Var}(X_1 X_2)$ and $R_{X_1 X_2}^2 = R^2$ from the regression: 
+$$(X_1 X_2) = \gamma_0 + \gamma_1 X_1 + \gamma_2 X_2 + \epsilon.$$
+This makes
+$$f^2 = \frac{\beta_3^2 \, \sigma_{X_1 X_2}^2 (1 - R_{X_1 X_2}^2)}{\sigma^2}.$$
+
+Suppose both predictors are binary:
+\begin{align*}
+X_{1i} \sim& \text{Bernoulli}(0.50)\\
+X_{2i} \sim& \text{Bernoulli}(0.50)\\
+\end{align*}
+and $\beta_0=\beta_1=\beta_2=0$, $\beta_3=0.50$, and $\sigma=1$. 
+
+**As a basis for comparison, conduct a simple power analysis that ignores the interaction (e.g., $Y = \beta_0 + \beta_1 X_1$), where $\beta_1=0.50$.**
+
+```{r}
+p <- 2 # beta0, beta1
+f2.no.int <- 0.50^2/1^2
+(n.simple <- ceiling(pwr.f2.test(u = 1,
+                                 f2 = f2.no.int,
+                                 sig.level = 0.05,
+                                 power = 0.80)$v + p))
+```
+
+**Next, conduct a power analysis that ignores the third term is an interaction (e.g., $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3$), where $\beta_3=0.50$.**
+
+```{r}
+p <- 4 # beta0, beta1, beta2, beta3
+(n.no.int <- ceiling(pwr.f2.test(u = 1,
+                                f2 = f2.no.int,
+                                sig.level = 0.05,
+                                power = 0.80)$v + p))
+```
+
+**Assess whether what we did in the previous step worked. Conduct a simulation for the proposed interaction model where $\beta_3=0.50$. At each iteration, generate data of the size recommended in part (c) and test the interaction coefficient. What is the empirical power?**
+
+```{r}
+set.seed(1313)
+R <- 1000
+int.p <- rep(NA, R)
+for(i in 1:R){
+  x1 <- rbinom(n = n.no.int, size = 1, prob = 0.50)
+  x2 <- rbinom(n = n.no.int, size = 1, prob = 0.50)
+  y  <- 0 + 0*x1 + 0*x2 + 0.50*(x1*x2) + rnorm(n = n.no.int, mean = 0, sd = 1)
+  int.p[i] <- summary(lm(y ~ x1*x2))$coefficients["x1:x2", "Pr(>|t|)"]
+}
+mean(int.p < 0.05) # power
+```
+The empirical power is around 8.4%, which is very below the recommended 80%. 
+
+## Part d
+
+**Compute the variance of the product, noting here that $(X_1 X_2) \sim \text{Bernoulli}(0.25)$.**
+
+$$
+\sigma^2_{X_1X_2} = 0.25(1 - 0.25) = 0.1875.
+$$
+```{r}
+(var.prod <- 0.25*(1 - 0.25))
+```
+The variance of the product is 0.1875.
+
+**Create a dataset of $n=4$ containing all possible combinations of $X_1$ and $X_2$ with $(X_1X_2)$, then fit the regression model predicting the interaction with the unique terms. Report the $R^2$.**
+
+```{r}
+# create dataset
+dat.combos <- tibble(X1 = c(0, 1, 0, 1),
+                     X2 = c(0, 0, 1, 1)) |>
+  mutate(X1X2 = X1*X2)
+
+# report R2
+(R2.prod <- summary(lm(X1X2 ~ X1 + X2, data = dat.combos))$r.squared)
+```
+
+**Next, conduct a power analysis that does not ignore that the third term is an interaction (e.g., $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3$), where $\beta_3=0.50$. You can do this using `pwr.f2.test()` and specifying the effect size using the anticipated coefficient and the values we just calculated:** 
+$$\beta_3^2 \sigma^2_{X_1 X_2}(1 - R^2_{X_1 X_2})$$
+
+```{r}
+# power analysis: not ignoring interacion
+p <- 4 # beta0, beta1, beta2, beta3
+beta3 <- 0.50
+(f2.int <- beta3^2*var.prod*(1 - R2.prod)/1^2)
+
+(n.int <- ceiling(pwr.f2.test(u = 1,
+                              f2 = f2.int,
+                              sig.level = 0.05,
+                              power = 0.80)$v + p))
+```
+The sample size needed to reach a power of 80% is $n=507$.
+
+**How would this change if we specified $X_1$ and $X_2$ as being independently drawn from a Bernoulli($0.2$) distribution? A Normal(0,1)?**
+
+```{r}
+# X1 and X2 ~ Bernoulli(0.2)
+dat.combos.bern <- tibble(X1 = c(0, 1, 0, 1),
+                       X2 = c(0, 0, 1, 1)) |>
+  mutate(X1X2 = X1*X2,
+         w = dbinom(X1, 1, 0.2)*dbinom(X2, 1, 0.2))
+(var.prod.bern <- 0.04*(1 - 0.04))  # X1X2 ~ Bernoulli(0.04)
+(R2.prod.bern  <- summary(lm(X1X2 ~ X1 + X2, data = dat.combos.bern, weights = w))$r.squared)
+(f2.int.bern   <- beta3^2*var.prod.bern*(1 - R2.prod.bern))
+(n.int.2 <- ceiling(pwr.f2.test(u = 1,
+                                f2 = f2.int.bern,
+                                sig.level = 0.05,
+                                power = 0.80)$v + p))
+```
+We would need a sample size of $n=1231$ to achieve a power of 80% if $X_1$ and $X_2$ were independently drawn from a Bernoulli($0.2$) distribution.
+
+
+```{r}
+# Normal(0,1) distribution
+set.seed(1313)
+dat.norm <- tibble(X1 = rnorm(1e6), X2 = rnorm(1e6)) |>
+  mutate(X1X2 = X1*X2)
+
+(var.prod.n <- var(dat.norm$X1X2))
+(R2.prod.n <- summary(lm(X1X2 ~ X1 + X2, data = dat.norm))$r.squared)
+
+(f2.int.n <- beta3^2*1*(1 - 0)/1^2)
+
+(n.int.n <- ceiling(pwr.f2.test(u = 1,
+                                f2 = f2.int.n,
+                                sig.level = 0.05,
+                                power = 0.80)$v + p))
+```
+
+The sample size required to have 80% power if the predictors are normally distributed is $n=36$. This matches the sample size needed from the power analysis that ignores the third term is an interaction.
+
+# Extra Practice
+* I initially had an IRWLS/Quantile regression question that I replaced with Question 1 (which is better practice for y'all). 
+* See [https://www.nature.com/articles/s41598-026-38847-3](https://www.nature.com/articles/s41598-026-38847-3) if you want another practice dataset.
