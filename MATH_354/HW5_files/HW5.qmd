@@ -401,7 +401,9 @@ On the log scale, the relationship between dbh and root biomass is linear (r = 0
 
 The new linear regression model is on the log scale, where logdbh and species are predictors for logrootbiomass.
 $$
-\log(Y_i) = \beta_0 + \beta_1 \log(\text{DBH}_i) + \beta_2 (\text{sp}_i = \text{"Pinus"}) + \beta_3 (\text{sp}_i = \text{"Schima"}) + \beta_4 \log(\text{DBH}_i)(\text{sp}_i = \text{"Pinus"}) + \beta_5 \log(\text{DBH}_i)(\text{sp}_i = \text{"Schima"}) + \epsilon_i
+\log(Y_i) = \beta_0 + \beta_1 \log(\text{DBH}_i) + \beta_2 (\text{sp}_i = \text{"Pinus"}) 
++ \beta_3 (\text{sp}_i = \text{"Schima"}) + \beta_4 \log(\text{DBH}_i)(\text{sp}_i = \text{"Pinus"}) 
++ \beta_5 \log(\text{DBH}_i)(\text{sp}_i = \text{"Schima"}) + \epsilon_i
 $$
 ```{r}
 mod.trees.log <- lm(logrootbiomass ~ logdbh*sp,
