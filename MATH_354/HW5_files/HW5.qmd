@@ -351,12 +351,12 @@ dat.trees <- read_csv("LaiTreeData.csv")|>
 #| message: false
 #| warning: false
 library(tidyverse)
-library(GGally)      # ggpairs()
-library(broom)       # augment(), tidy()
-library(car)         # vif()
-library(effectsize)  # F_to_omega2(), omega_squared(), interpret_omega_squared(), standardize_parameters()
-library(emmeans)     # emtrends(), emmip(), pairs()
-library(knitr)       # kable()
+library(GGally)      
+library(broom)       
+library(car)         
+library(effectsize)  
+library(emmeans)     
+library(knitr)       
 
 source("plotResiduals.R")  # plotResiduals()
 source("plotInfluence.R")  # plotInfluence()
